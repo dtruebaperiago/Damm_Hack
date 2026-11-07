@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Store } from "../app/store.mjs";
-import { template } from "../app/domain.mjs";
+import { Store } from "./fixtures.mjs";
+import { template } from "./fixtures.mjs";
 import { mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 

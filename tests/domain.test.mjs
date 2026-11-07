@@ -1,10 +1,12 @@
+import { template, calibrationData } from './fixtures.mjs';
+const validateSurvey=(s)=>validate(s,template);
+const historical=(p)=>history(p,calibrationData);
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  template,
-  validateSurvey,
+  validateSurvey as validate,
   normalizeAnswers,
-  historical,
+  historical as history,
   aggregate,
   comparable,
   paired,

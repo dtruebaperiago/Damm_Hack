@@ -29,7 +29,6 @@ const cookieValue = (req, key) => {
 };
 export function createApplication(config) {
   const store = new Store(config.dbPath, config);
-  if (config.mode === "demo") store.seed();
   const passwordSalt = randomBytes(16),
     passwordHash = scryptSync(config.adminPassword, passwordSalt, 32);
   const secure = new URL(config.origin).protocol === "https:";
@@ -246,21 +245,23 @@ export function createApplication(config) {
           return send(201, store.waveDTO(w.id));
         }
         const match = path.match(
-          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|followup|qr|export))?$/,
+          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|followup|qr|typeform-qr|export))?$/,
         );
         if (!match) throw new AppError("Ruta no trobada.", 404);
         const [, id, action] = match;
         let w = store.wave(id);
         if (!action && req.method === "GET")
           return send(200, store.waveDTO(id));
-        if (action === "qr" && req.method === "GET") {
+        if (["qr", "typeform-qr"].includes(action) && req.method === "GET") {
           if (!w.form_id)
             throw new AppError(
               "Publica la consulta abans de descarregar-ne el QR.",
               409,
             );
           const code = qr(0, "M");
-          code.addData(`${config.origin}/participa/${id}`);
+          if (action === "typeform-qr" && !w.form_url)
+            throw new AppError("Aquesta consulta no té formulari Typeform.", 409);
+          code.addData(action === "typeform-qr" ? w.form_url : `${config.origin}/participa/${id}`);
           code.make();
           res.setHeader(
             "Content-Disposition",

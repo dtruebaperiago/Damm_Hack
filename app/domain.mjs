@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
-export const template = JSON.parse(
-  readFileSync(new URL("./template.json", import.meta.url), "utf8"),
-);
+export const template = { titol: "", introduccio: "", temps_estimat_segons: 90, adaptacions: [], preguntes: [] };
 export const THRESHOLD = 10;
 export const SIGNALS = [
   "participacio_nit",
@@ -42,17 +39,8 @@ export const topics = {
   planificacio: "Antelació dels torns",
   altres: "Altres / no classificable",
 };
-// shortcut: filtre restrictiu per a dades de demo; substituir-lo per depuració revisada abans d’usar dades reals.
-export const safeTexts = {
-  "Les instruccions estan disperses.": ["comunicacio"],
-  "Cal un resum de les instruccions a cada torn.": ["comunicacio"],
-  "No sé on demanar ajuda.": ["suport"],
-  "Cal conèixer els torns amb més antelació.": ["planificacio"],
-  "Les instruccions estan disperses i no sé on demanar ajuda.": [
-    "comunicacio",
-    "suport",
-  ],
-};
+// shortcut: el text lliure queda exclòs fins a disposar de depuració de privacitat revisada.
+export const safeTexts = {};
 export const visible = (q, answers) =>
   !q.condicio_de_visualitzacio ||
   q.condicio_de_visualitzacio.totes.every((c) =>
@@ -239,8 +227,7 @@ export function normalizeAnswers(s, input = {}) {
 const pct = (n, d) => Math.round((n / d) * 1000) / 10;
 const protectedCount = (n) => n > 0 && n < THRESHOLD;
 const safePartition = (ns) => !ns.some(protectedCount);
-export const calibrationData = JSON.parse(readFileSync(new URL('./calibration.json', import.meta.url), 'utf8'));
-export function historical(p, data = calibrationData) {
+export function historical(p, data = null) {
   if (!data || p.sector !== data.sector || p.ubicacio !== data.ubicacio) return {abast:'insuficient'};
   const {referencia,voluntaria}=data;
   const bases=[referencia.reduce((a,b)=>a+b,0),voluntaria.reduce((a,b)=>a+b,0)];
@@ -263,7 +250,7 @@ export function aggregate(rows, population, survey, audience = null) {
       evidence: [],
       textos: null,
       branca: null,
-      dificultats: null,
+      seleccions: [],
     };
   const metrics = survey.preguntes
     .filter((q) => q.tipus === "escala_1_5")
@@ -369,17 +356,12 @@ export function aggregate(rows, population, survey, audience = null) {
         text: m.text,
         favorable: m.favorable,
       });
-  const q3 = survey.preguntes.find((q) => q.id === "dificultat_principal");
-  const difficulties = q3?.opcions.map((o) => ({
-    id: o.id,
-    etiqueta: o.etiqueta,
-    n: rows.filter((r) => r.answers[q3.id]?.value === o.id).length,
-  }));
-  const validDifficulty = difficulties?.reduce((n, o) => n + o.n, 0) || 0;
-  const diffSafe =
-    difficulties &&
-    validDifficulty >= THRESHOLD &&
-    safePartition([...difficulties.map((o) => o.n), total - validDifficulty]);
+  const selections = survey.preguntes.filter(q => q.tipus === "seleccio_unica").flatMap(q => {
+    const opcions = q.opcions.map(o => ({...o,n:rows.filter(r => r.answers[q.id]?.value === o.id).length}));
+    const base = opcions.reduce((n,o) => n+o.n,0);
+    return base >= THRESHOLD && safePartition([...opcions.map(o => o.n),total-base])
+      ? [{id:q.id,text:q.text,base,opcions}] : [];
+  });
   return {
     total,
     taxa: population && total <= population ? pct(total, population) : null,
@@ -407,9 +389,7 @@ export function aggregate(rows, population, survey, audience = null) {
     temes,
     textos: textBaseSafe ? texts.length : null,
     evidence,
-    dificultats: diffSafe
-      ? { base: validDifficulty, opcions: difficulties }
-      : null,
+    seleccions: selections,
     branca: branchSafe
       ? {
           elegibles: eligible.length,

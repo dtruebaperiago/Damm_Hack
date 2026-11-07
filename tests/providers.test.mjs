@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { typeformClient, generateSurvey, llmJSON, requestJSON } from "../app/providers.mjs";
-import { template } from "../app/domain.mjs";
+import { template } from "./fixtures.mjs";
 
 test('generation attaches canonical reference questions even when the LLM rewrites, reorders or omits them',async t=>{
   const generated=structuredClone(template);
@@ -11,7 +11,7 @@ test('generation attaches canonical reference questions even when the LLM rewrit
   generated.preguntes.splice(1,1);
   generated.preguntes.push(generated.preguntes.shift());
   t.mock.method(globalThis,'fetch',async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(generated)}}]}),{status:200}));
-  const result=await generateSurvey({objectiu:'Torns'},{provider:'groq',groqKey:'synthetic',model:'openai/gpt-oss-120b'});
+  const result=await generateSurvey({objectiu:'Torns'},{provider:'groq',groqKey:'synthetic',model:'openai/gpt-oss-120b'},template);
   assert.deepEqual(result.preguntes,template.preguntes);
 });
 
@@ -21,7 +21,7 @@ test('Groq uses GPT OSS chat JSON without sending credentials in the payload',as
     target=url;body=JSON.parse(options.body);auth=options.headers.Authorization;
     return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(template)}}]}),{status:200});
   });
-  assert.deepEqual(await generateSurvey({objectiu:'Torns'},{provider:'groq',groqKey:'synthetic-test',model:'openai/gpt-oss-120b'}),template);
+  assert.deepEqual(await generateSurvey({objectiu:'Torns'},{provider:'groq',groqKey:'synthetic-test',model:'openai/gpt-oss-120b'},template),template);
   assert.equal(target,'https://api.groq.com/openai/v1/chat/completions');
   assert.equal(body.response_format.type,'json_object');
   assert.equal(body.model,'openai/gpt-oss-120b');
@@ -70,7 +70,7 @@ test("Typeform pagination, stable remote mapping and reconciliation use exact ti
   assert.equal((await client.find("Exact title")).id, "one");
   assert.equal(calls.filter((c) => c.method === "POST").length, 0);
 });
-test("LLM uses versioned Markdown, JSON and distinct task contexts; invalid output is rejected", async (t) => {
+test("LLM uses an explicit JSON contract, JSON and distinct task contexts; invalid output is rejected", async (t) => {
   let request;
   t.mock.method(globalThis, "fetch", async (url, options) => {
     request = JSON.parse(options.body);
@@ -86,9 +86,9 @@ test("LLM uses versioned Markdown, JSON and distinct task contexts; invalid outp
     );
   });
   const config = { openaiKey: "test-key", model: "test-model" };
-  const s = await generateSurvey({ objectiu: "Torns" }, config);
+  const s = await generateSurvey({ objectiu: "Torns" }, config, template);
   assert.deepEqual(s, template);
-  assert.ok(request.instructions.includes("Mètode de generació en JSON"));
+  assert.ok(request.instructions.includes("Contracte de generació JSON"));
   assert.ok(request.instructions.includes("credencials sintètiques"));
   assert.equal(request.store, false);
   assert.ok(!JSON.stringify(request).includes("test-key"));
@@ -98,7 +98,7 @@ test("LLM uses versioned Markdown, JSON and distinct task contexts; invalid outp
     config,
   );
   assert.ok(request.instructions.includes("ID efímer rebut"));
-  assert.ok(!request.instructions.includes("Mètode de generació en JSON"));
+  assert.ok(!request.instructions.includes("Contracte de generació JSON"));
   t.mock.method(
     globalThis,
     "fetch",

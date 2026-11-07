@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='escolta-browser-') as temp:
     env = {**os.environ, 'APP_MODE': 'demo', 'PORT': '3017', 'PUBLIC_ORIGIN': BASE,
            'DB_PATH': str(Path(temp) / 'demo.sqlite'), 'ADMIN_PASSWORD': 'equip-damm',
            'HMAC_SECRET': 'browser-test-secret-not-for-production'}
-    server = subprocess.Popen(['node', 'app/server.mjs'], cwd=ROOT, env=env,
+    server = subprocess.Popen(['node', 'tests/browser-server.mjs'], cwd=ROOT, env=env,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     try:
@@ -50,10 +50,19 @@ with tempfile.TemporaryDirectory(prefix='escolta-browser-') as temp:
             page.set_viewport_size({'width': 1440, 'height': 1050})
             page.get_by_role('button', name='Nova consulta', exact=True).click()
             page.get_by_label('Nom de la campanya').fill('Prova E2E · torns')
+            page.locator('#new-objectiu').fill('Entendre el canvi de torns')
+            page.locator('#new-decisio').fill('Millorar la comunicació')
+            page.locator('#new-context').fill('Cas sintètic de torns')
             page.get_by_role('button', name='Crear esborrany').click()
             expect(page.get_by_role('heading', name='Prova E2E · torns')).to_be_visible()
             campaign = page.url.split('#campaign/')[1].split('/')[0]
             page.get_by_role('link', name='Consulta', exact=True).click()
+            expect(page.get_by_role('heading', name='Encara no hi ha preguntes')).to_be_visible()
+            page.get_by_role('button', name='Editar JSON complet').click()
+            fixture = json.loads((ROOT / 'tests/fixtures/survey.json').read_text(encoding='utf-8'))
+            page.locator('#json-input').fill(json.dumps(fixture, ensure_ascii=False))
+            page.get_by_role('button', name='Validar i desar').click()
+            expect(page.locator('#preview-q1')).to_be_visible()
             page.locator('#preview-q1').select_option('1')
             page.locator('#preview-q3').select_option('canvis')
             expect(page.locator('#preview-path')).to_contain_text('4 preguntes')
@@ -61,8 +70,8 @@ with tempfile.TemporaryDirectory(prefix='escolta-browser-') as temp:
             expect(page.locator('#preview-path')).to_contain_text('3 preguntes')
             page.locator('#survey-title').fill('Consulta E2E revisada')
             page.get_by_role('button', name='Desar canvis').click()
-            expect(page.get_by_role('button', name='Aprovar versió 2')).to_be_visible()
-            page.get_by_role('button', name='Aprovar versió 2').click()
+            expect(page.get_by_role('button', name='Aprovar versió 3')).to_be_visible()
+            page.get_by_role('button', name='Aprovar versió 3').click()
             page.get_by_role('button', name='Publicar consulta').click()
             expect(page.get_by_text('En recollida', exact=True)).to_be_visible()
             page.get_by_role('link', name='Difusió', exact=True).click()
@@ -112,10 +121,10 @@ with tempfile.TemporaryDirectory(prefix='escolta-browser-') as temp:
             expect(page.locator('#main')).to_contain_text('Seguiment · Nou sistema de torns')
             expect(page.locator('#question-0')).to_have_value('Tinc clar com funciona el nou sistema de torns.')
             page.goto(BASE + '/#campaign/torns-inicial/results')
-            expect(page.get_by_role('heading', name='Com s’està vivint el canvi?')).to_be_visible()
+            expect(page.get_by_role('heading', name='Resultats de la consulta')).to_be_visible()
             page.screenshot(path=str(OUTPUT / 'results-desktop.png'), full_page=True)
             page.goto(BASE + '/#calibration')
-            expect(page.get_by_role('heading', name='Mirar les dades amb context.')).to_be_visible()
+            expect(page.get_by_role('heading', name='Sense dades històriques')).to_be_visible()
             page.goto(BASE + '/#actions')
             expect(page.get_by_role('heading', name='Donar continuïtat a l’escolta.')).to_be_visible()
             page.goto(BASE + '/#campaigns')

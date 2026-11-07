@@ -7,10 +7,8 @@ import {
   normalizeAnswers,
   aggregate,
   historical,
-  calibrationData,
   paired,
   catalog,
-  safeTexts,
 } from "./domain.mjs";
 import { AppError } from "./providers.mjs";
 const now = () => Date.now();
@@ -32,7 +30,6 @@ export class Store {
         "utf8",
       ),
     );
-    this.db.prepare('INSERT OR IGNORE INTO historical_calibrations VALUES(?,?)').run('setembre-2026',json(calibrationData));
     this.db.exec("UPDATE waves SET state='uncertain' WHERE state='publishing'");
   }
   calibration(audience) {
@@ -82,11 +79,7 @@ export class Store {
       objectiu: c.objectiu.trim(),
       decisio: c.decisio.trim(),
       context: c.context.trim(),
-      conceptes: [
-        "comprensió percebuda",
-        "coneixement del canal d’ajuda",
-        "dificultat principal",
-      ],
+      conceptes: [],
       public: { sector: c.sector, ubicacio: c.ubicacio, torn: c.torn },
       dies: c.dies,
       exclusions:
@@ -473,9 +466,7 @@ export class Store {
       throw new AppError("Cal una acció vinculada a evidència publicable.");
     const a = catalog.find((a) => a.id === action),
       survey = structuredClone(w.survey);
-    survey.titol = "Com evoluciona el canvi de torns?";
-    survey.preguntes[2].text =
-      "En els darrers set dies, després de l’acció de seguiment, quina ha estat la principal dificultat amb el nou sistema de torns?";
+    survey.titol = "Seguiment · " + w.survey.titol;
     const c = w.config;
     const child = this.createWave(
       {
@@ -518,6 +509,7 @@ export class Store {
       survey: w.survey,
       source: w.source,
       published: !!w.form_id,
+      form_url: w.form_url,
       results,
       diagnostic: this.diagnostic(w),
       proposals:
@@ -547,43 +539,8 @@ export class Store {
         };
       });
   }
-  diagnostic(w) {
-    const h = this.calibration(w.config.public);
-    return [
-      {
-        id: "historic_extrems",
-        estat:
-          h.abast === "insuficient"
-            ? "sense_dades_suficients"
-            : "senyal_mesurat",
-        titol:
-          h.abast === "insuficient"
-            ? "Sense referència històrica pertinent"
-            : "+20,6 punts als extrems",
-        text:
-          h.abast === "insuficient"
-            ? "No hi ha calibració per a aquest públic."
-            : "Al sondeig de setembre, la recollida voluntària va concentrar més puntuacions extremes. No corregeix la consulta actual.",
-      },
-      {
-        id: "cobertura",
-        estat: "risc",
-        titol: "Arribar als dos torns",
-        text: "Comparteix el QR a l’inici de cada torn. L’accés efectiu de tota la plantilla continua sense verificar.",
-      },
-      {
-        id: "moment",
-        estat: "risc",
-        titol: "Una finestra amb oportunitats",
-        text: "Revisa si els dies de recollida cobreixen les rotacions i evita pressió per respondre davant de responsables.",
-      },
-      {
-        id: "participacio_nit",
-        estat: "sense_dades_suficients",
-        titol: "Participació per torn pendent",
-        text: "El 15% i el 55% de la plantilla d’exemple no són dades d’aquesta campanya. No s’utilitzen com a senyal mesurat.",
-      },
-    ];
+  diagnostic() {
+    return [];
   }
   rateLimit(bucket, limit = 10) {
     const key = this.hash(bucket),
@@ -602,74 +559,6 @@ export class Store {
     this.db
       .prepare("UPDATE rate_limits SET count=count+1 WHERE bucket=?")
       .run(key);
-  }
-  seed() {
-    if (this.db.prepare("SELECT 1 FROM waves LIMIT 1").get()) return;
-    const base = {
-      titol: "Nou sistema de torns",
-      objectiu: "Entendre com s’està vivint el canvi de torns",
-      decisio:
-        "Decidir si cal reforçar la comunicació del canvi o el canal d’ajuda",
-      context:
-        "Planta fictícia de Catalunya. Canvi de torns fixos a rotació Dia/Nit comunicat dues setmanes abans.",
-      sector: "Planta",
-      ubicacio: "Planta de demo",
-      torn: "Tots dos",
-      dies: 7,
-    };
-    const w = this.createWave(base, {
-      id: "torns-inicial",
-      cycle: "cicle-demo-torns",
-    });
-    this.approve(w.id, 1);
-    this.startPublish(w.id);
-    this.finishPublish(w.id, "fixture-inicial", null);
-    const texts = Object.keys(safeTexts);
-    for (let i = 0; i < 180; i++) {
-      const index = i < 132 ? i + 1 : 361 + i - 132;
-      const token = this.delivery(
-        w.id,
-        `DEMO-${String(index).padStart(4, "0")}`,
-      );
-      const low = i < 60;
-      this.accept(
-        w.id,
-        token,
-        `fixture-${i}`,
-        {
-          comprensio: low
-            ? "1"
-            : i < 90
-              ? "2"
-              : i < 120
-                ? "3"
-                : i < 150
-                  ? "4"
-                  : "5",
-          suport: String(1 + Math.floor(i / 36)),
-          dificultat_principal: low ? "funcionament" : "cap",
-          ...(low
-            ? {
-                aclariment_comprensio:
-                  texts[i % 3 === 0 ? 0 : i % 3 === 1 ? 1 : 4],
-              }
-            : {}),
-        },
-        "fixture",
-      );
-    }
-    this.close(w.id);
-    this.createWave(
-      { ...base, titol: "Escolta del canvi · nova consulta" },
-      { id: "torns-esborrany" },
-    );
-    const active = this.createWave(
-      { ...base, titol: "Canvi de torns · consulta oberta" },
-      { id: "torns-oberta" },
-    );
-    this.approve(active.id, 1);
-    this.startPublish(active.id);
-    this.finishPublish(active.id, "local-torns-oberta", null);
   }
   cleanup() {
     this.db.prepare("DELETE FROM sessions WHERE expires_at<?").run(now());
