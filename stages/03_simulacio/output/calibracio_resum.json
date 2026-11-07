@@ -1,0 +1,104 @@
+{
+  "poblacio": {
+    "poblacio_id": "planta-catalunya-setembre",
+    "public_id": "planta-catalunya",
+    "sector": "Planta",
+    "ubicacio": "Fàbrica fictícia de Catalunya",
+    "torn": "Tots dos",
+    "periode": "Setembre",
+    "poblacio_elegible": 600,
+    "origen": "sondeig_sintetic"
+  },
+  "recollides": {
+    "referencia": {
+      "recollida_id": "setembre-referencia",
+      "poblacio_id": "planta-catalunya-setembre",
+      "periode": "Setembre",
+      "modalitat": "obligatoria_simulada",
+      "canal": null,
+      "unicitat": "premissa_simulada",
+      "origen": "sondeig_sintetic"
+    },
+    "voluntaria": {
+      "recollida_id": "setembre-voluntaria",
+      "poblacio_id": "planta-catalunya-setembre",
+      "periode": "Setembre",
+      "modalitat": "voluntaria",
+      "canal": "qr_compartit",
+      "unicitat": "sense_verificar",
+      "origen": "sondeig_sintetic"
+    }
+  },
+  "resum": {
+    "origen": "sondeig_sintetic",
+    "font": ".plans/escolta-activa-damm-spec.md#sondeig-sintètic-i-diagnòstic",
+    "periode": "Setembre",
+    "pregunta_id": "clima_setembre",
+    "pregunta": "Em sento a gust en el meu entorn de treball i condicions",
+    "escala": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "distribucions": {
+      "referencia": {
+        "base": 600,
+        "recomptes_1_a_5": [
+          53,
+          109,
+          275,
+          112,
+          51
+        ],
+        "pct_1_a_5": [
+          8.8,
+          18.2,
+          45.8,
+          18.7,
+          8.5
+        ],
+        "pct_extrems": 17.3
+      },
+      "voluntaria": {
+        "base": 240,
+        "recomptes_1_a_5": [
+          46,
+          32,
+          68,
+          49,
+          45
+        ],
+        "pct_1_a_5": [
+          19.2,
+          13.3,
+          28.3,
+          20.4,
+          18.8
+        ],
+        "pct_extrems": 37.9
+      }
+    },
+    "taxa_aparent_voluntaria_pct": 40.0,
+    "diferencia_extrems_pp": 20.6,
+    "limitacio": "El QR compartit compta trameses vàlides i deixa la unicitat sense verificar. El contrast de setembre aporta context sobre el risc d’autoselecció i no resposta. La pregunta és independent de les onades sobre el canvi de torns."
+  },
+  "casos_qa_sintetics": {
+    "denominador_absent": {
+      "trameses_valides": 120,
+      "taxa_aparent": {
+        "estat": "indisponible",
+        "motiu": "Falta el denominador del mateix públic i període"
+      }
+    },
+    "talls_protegits": {
+      "trameses_valides": 53,
+      "per_torn": {
+        "Dia": "suprimit",
+        "Nit": "suprimit"
+      },
+      "motiu": "Els talls per torn es protegeixen també per diferència"
+    }
+  }
+}

@@ -16,7 +16,7 @@ La guia del repte fixa els requisits i l’especificació de l’equip concreta 
 | Persona participant | Obre el QR al mòbil i respon sense compte. El comentari i, si s’habilita, la declaració de torn són opcionals. |
 | Plataforma | Valida, publica i importa des del servidor. Depura entrades, calcula agregats, aplica les regles de privacitat i conserva els vincles amb l’evidència. |
 | Typeform | Allotja el formulari publicat i retorna les respostes de prova. |
-| IA | Proposa preguntes i adaptacions, assenyala possibles problemes de redacció, etiqueta comentaris depurats i redacta síntesis i propostes basades en evidència publicable. |
+| IA | Proposa preguntes i adaptacions, assenyala possibles problemes de redacció, proposa temes a partir de comentaris depurats i redacta síntesis i propostes vinculades a evidència publicable. |
 
 ## Entitats i relacions
 
@@ -31,7 +31,7 @@ Els identificadors i les cardinalitats descriuen les regles del domini. La tria 
 | **Versió de consulta** | Clau `(campanya, número de versió)`, estat, títol, introducció, preguntes i ordre, branca, temps estimat, proposta de difusió i registre d’aprovació. L’aprovació fixa també el públic, la finestra i les restriccions que s’han revisat. |
 | **Pregunta** | Dins la versió, identificador estable, posició, enunciat, tipus, opcions, obligatorietat i condició de salt si escau. Les dues preguntes de referència conserven la seva definició entre onades. |
 | **Publicació** | Enllaç entre una versió aprovada i un formulari de Typeform, amb identificador extern únic, URL i correspondència entre camps externs i preguntes. El QR deriva de la URL. Proposta de demo: un formulari per onada i una versió per formulari. |
-| **Resposta depurada** | Vinculada a la versió que s’ha respost. Identificador tècnic, origen, finestra de recollida, respostes per identificador de pregunta i torn declarat opcional. Pot incloure text depurat o només etiquetes temàtiques. Els imports de Typeform són únics per `(formulari, codi extern de resposta)`. Les fixtures tenen claus i orígens propis. |
+| **Resposta depurada** | Vinculada a la versió que s’ha respost. Identificador tècnic, origen, finestra de recollida, respostes per identificador de pregunta i torn declarat opcional. Pot incloure text depurat o només etiquetes temàtiques. Els imports de Typeform són únics per `(formulari, codi extern de resposta)`. Si s’habilita l’aparellament, conserva també un identificador intern de participació limitat a la sèrie. Les fixtures tenen claus i orígens propis. |
 | **Resultat i evidència** | Instantània d’una onada amb període, segment, base, origen de les dades, regles d’anàlisi i diagnòstic històric aplicable. Cada troballa publicable té un identificador estable dins la instantània. L’acció conserva la referència a la troballa exacta encara que s’actualitzi el dashboard. |
 | **Acció seleccionada** | Campanya d’origen, troballes publicables, acció concreta, rol responsable suggerit i punt a comprovar. Proposta de demo: una acció seleccionada per campanya, que dona lloc a un únic esborrany de seguiment. |
 
@@ -68,7 +68,8 @@ flowchart LR
 - **Protecció de resultats.** Aplicar `n ≥ 10` al servidor sobre la base efectiva de cada tall, mètrica i tema. Cada tema compta trameses diferents. Fer servir vistes predefinides i ocultar talls addicionals o agrupar si el total o altres talls permeten reconstruir una cel·la protegida. Aplicar la mateixa comprovació a les comparacions i actualitzacions visibles. Al dashboard arriben únicament agregats autoritzats i indicadors d’insuficiència.
 - **Text lliure.** Abans de persistir text per a l’anàlisi o enviar-lo a la IA, eliminar dades identificatives o descartar el comentari si hi ha dubte. La resta de la resposta pot continuar sent vàlida. Els identificadors tècnics, el text cru i les metadades alienes al cas queden fora de les sortides i dels logs.
 - **Comparació entre onades.** Comprensió i suport mantenen identificador, text, ordre, obligatorietat i escala d’1 a 5 a cada onada, amb «No ho puc valorar» com a categoria separada. Aquest valor queda fora del càlcul d’escala. Només mostrar la tendència directa si les preguntes són equivalents, el públic i el protocol són comparables i la base és publicable a cada onada. Mostrar les limitacions per canvis de composició o cobertura. La referència de l’acció és la primera microconsulta del canvi.
-- **Traçabilitat de la IA.** Validar estructura, restriccions i identificadors abans de mostrar una proposta. Les accions només poden citar evidència publicable. Si la base és insuficient per sustentar una acció sobre el canvi, la sortida pot proposar millorar la recollida si hi ha evidència que ho justifiqui.
+- **Comparació aparellada.** El servidor pot enllaçar puntuacions de la mateixa sèrie amb un codi opcional i calcular quants parells pugen, es mantenen o baixen. La vista de RRHH i l’entrada del LLM són agregades. [Regles de recuperació i aparellament](contracte-analisi-llm.md#comparació-amb-enquestes-anteriors)
+- **Traçabilitat de la IA.** Validar estructura, restriccions, identificadors i suport semàntic abans de mostrar un bloc generat. Les accions només poden citar evidència publicable. Si la base és insuficient per sustentar una acció sobre el canvi, la sortida pot proposar millorar la recollida si hi ha evidència que ho justifiqui. [Protocol d’interpretació](protocol-interpretacio-llm.md)
 
 ## Comprovació amb dades sintètiques
 
