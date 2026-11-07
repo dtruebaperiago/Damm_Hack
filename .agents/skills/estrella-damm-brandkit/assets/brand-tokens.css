@@ -1,0 +1,28 @@
+/* Proposta de prototip; NO són especificacions oficials de marca.
+   Tokens amb àmbit limitat. El consumidor defineix els components. */
+[data-brand="estrella-damm"] {
+  --ed-red: #C8102E;
+  --ed-red-hover: #A30D26;
+  --ed-gold: #D5AD55;
+  --ed-paper: #FAF7F0;
+  --ed-surface: #FFFFFF;
+  --ed-ink: #24201D;
+  --ed-muted: #625B54;
+  --ed-border: #D9D1C5;
+  --ed-control-border: #81776A;
+  --ed-focus: #175E83;
+  --ed-success: #256344;
+  --ed-warning: #805500;
+  --ed-error: #A51D2D;
+  --ed-font-body: Arial, Helvetica, sans-serif;
+  --ed-font-heading: Arial, Helvetica, sans-serif;
+  --ed-font-editorial: Georgia, "Times New Roman", serif;
+  --ed-space-1: 4px;
+  --ed-space-2: 8px;
+  --ed-space-3: 16px;
+  --ed-space-4: 24px;
+  --ed-space-5: 32px;
+  --ed-space-6: 48px;
+  --ed-radius-control: 8px;
+  --ed-radius-panel: 12px;
+}

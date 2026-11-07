@@ -1,0 +1,159 @@
+{
+  "titol": "Com estàs vivint el nou sistema de torns?",
+  "introduccio": "Volem entendre com estàs vivint el canvi de torns. Accedeixes amb una credencial fictícia. Les respostes es pseudonimitzen i es poden relacionar entre les onades del mateix cicle. RRHH només veu resultats agrupats amb una base suficient. El comentari és opcional: evita noms o dades identificatives. Durada estimada: 90 segons; pendent de cronometratge amb persones.",
+  "temps_estimat_segons": 90,
+  "adaptacions": [
+    {
+      "senyal_id": "participacio_nit",
+      "proposta": "Difondre el QR també a l'inici del torn de nit"
+    }
+  ],
+  "preguntes": [
+    {
+      "id": "comprensio",
+      "text": "Tinc clar com funciona el nou sistema de torns.",
+      "que_mesura": "Comprensió percebuda del canvi",
+      "quina_decisio_informa": "Valorar si cal explicar millor el funcionament",
+      "tipus": "escala_1_5",
+      "opcions": [
+        {
+          "id": "1",
+          "etiqueta": "Gens d’acord"
+        },
+        {
+          "id": "2",
+          "etiqueta": "Més aviat en desacord"
+        },
+        {
+          "id": "3",
+          "etiqueta": "Ni d’acord ni en desacord"
+        },
+        {
+          "id": "4",
+          "etiqueta": "Més aviat d’acord"
+        },
+        {
+          "id": "5",
+          "etiqueta": "Totalment d’acord"
+        },
+        {
+          "id": "no_valorable",
+          "etiqueta": "No ho puc valorar"
+        }
+      ],
+      "obligatoria": false,
+      "de_referencia": true,
+      "condicio_de_visualitzacio": null
+    },
+    {
+      "id": "suport",
+      "text": "Sé on demanar ajuda si tinc un dubte sobre el nou sistema de torns.",
+      "que_mesura": "Coneixement declarat del canal d’ajuda",
+      "quina_decisio_informa": "Valorar si cal fer més visible el canal d’ajuda",
+      "tipus": "escala_1_5",
+      "opcions": [
+        {
+          "id": "1",
+          "etiqueta": "Gens d’acord"
+        },
+        {
+          "id": "2",
+          "etiqueta": "Més aviat en desacord"
+        },
+        {
+          "id": "3",
+          "etiqueta": "Ni d’acord ni en desacord"
+        },
+        {
+          "id": "4",
+          "etiqueta": "Més aviat d’acord"
+        },
+        {
+          "id": "5",
+          "etiqueta": "Totalment d’acord"
+        },
+        {
+          "id": "no_valorable",
+          "etiqueta": "No ho puc valorar"
+        }
+      ],
+      "obligatoria": false,
+      "de_referencia": true,
+      "condicio_de_visualitzacio": null
+    },
+    {
+      "id": "dificultat_principal",
+      "text": "En els darrers set dies, quina ha estat la principal dificultat que has trobat amb el nou sistema de torns?",
+      "que_mesura": "Dificultat principal durant el període",
+      "quina_decisio_informa": "Escollir quin problema operatiu convé investigar primer",
+      "tipus": "seleccio_unica",
+      "opcions": [
+        {
+          "id": "funcionament",
+          "etiqueta": "Entendre com funciona"
+        },
+        {
+          "id": "antelacio",
+          "etiqueta": "Conèixer el torn amb antelació"
+        },
+        {
+          "id": "canvis",
+          "etiqueta": "Gestionar canvis de torn"
+        },
+        {
+          "id": "necessitats_personals",
+          "etiqueta": "Compatibilitzar el torn amb necessitats personals"
+        },
+        {
+          "id": "altra",
+          "etiqueta": "Una altra dificultat"
+        },
+        {
+          "id": "cap",
+          "etiqueta": "Cap dificultat"
+        },
+        {
+          "id": "no_us",
+          "etiqueta": "No he utilitzat el nou sistema en aquest període"
+        },
+        {
+          "id": "prefereixo_no_respondre",
+          "etiqueta": "Prefereixo no respondre"
+        }
+      ],
+      "obligatoria": false,
+      "de_referencia": false,
+      "condicio_de_visualitzacio": null
+    },
+    {
+      "id": "aclariment_comprensio",
+      "text": "Si vols, explica breument què t’hauria ajudat a entendre millor el canvi. Evita incloure noms o dades identificatives.",
+      "que_mesura": "Què hauria facilitat entendre el canvi en aquest recorregut",
+      "quina_decisio_informa": "Orientar una millora de la comunicació del canvi",
+      "tipus": "text_lliure",
+      "opcions": [],
+      "obligatoria": false,
+      "de_referencia": false,
+      "condicio_de_visualitzacio": {
+        "totes": [
+          {
+            "pregunta_id": "comprensio",
+            "opcions_ids": [
+              "1"
+            ]
+          },
+          {
+            "pregunta_id": "dificultat_principal",
+            "opcions_ids": [
+              "funcionament",
+              "antelacio",
+              "canvis",
+              "necessitats_personals",
+              "altra"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
