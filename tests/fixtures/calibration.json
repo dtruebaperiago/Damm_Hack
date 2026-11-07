@@ -1,0 +1,10 @@
+{
+  "sector": "Planta",
+  "ubicacio": "Planta de demo",
+  "population": 600,
+  "periode": "Setembre de 2026",
+  "pregunta": "Em sento a gust en el meu entorn de treball i condicions",
+  "referencia": [53, 109, 275, 112, 51],
+  "voluntaria": [46, 32, 68, 49, 45],
+  "origen": "Sondeig sintètic · conjunt de la fàbrica"
+}

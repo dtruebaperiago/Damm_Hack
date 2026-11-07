@@ -10,17 +10,19 @@ La guia del repte fixa els requisits i l’especificació de l’equip concreta 
 
 ## Actors i límits
 
+Actualització de la implementació: s’incorpora l’accés amb credencial fictícia i el seguiment pseudonimitzat del [prompt de construcció](../../../.plans/prompt-agent-web-completa.md). Consulta el [contracte implementat](../../../docs/implementation.md) i el [README](../../../README.md) per a persistència, autorització i límits. L’estat d’esborrany per revisar es conserva.
+
 | Actor | Responsabilitat |
 | --- | --- |
 | RRHH | Defineix necessitat, públic i restriccions. Revisa i aprova la versió, decideix quan publicar-la i tria l’acció. |
-| Persona participant | Obre el QR al mòbil i respon sense compte. El comentari i, si s’habilita, la declaració de torn són opcionals. |
+| Persona participant | Obre el QR al mòbil i introdueix una credencial sintètica autoritzada, sense crear compte. Pot aportar una resposta acceptada per onada. El comentari és opcional; el torn ve del registre fictici restringit. |
 | Plataforma | Valida, publica i importa des del servidor. Depura entrades, calcula agregats, aplica les regles de privacitat i conserva els vincles amb l’evidència. |
 | Typeform | Allotja el formulari publicat i retorna les respostes de prova. |
 | IA | Proposa preguntes i adaptacions, assenyala possibles problemes de redacció, proposa temes a partir de comentaris depurats i redacta síntesis i propostes vinculades a evidència publicable. |
 
 ## Entitats i relacions
 
-Els identificadors i les cardinalitats descriuen les regles del domini. La tria del format de persistència queda pendent.
+Els identificadors i les cardinalitats descriuen les regles del domini. La implementació utilitza SQLite amb migració versionada i taules separades per a revisions, credencials pseudonimitzades, sessions d’entrega, respostes depurades i vincles restringits. Les instantànies agregades es conserven amb l’onada.
 
 | Entitat | Dades mínimes i relacions |
 | --- | --- |
@@ -30,8 +32,8 @@ Els identificadors i les cardinalitats descriuen les regles del domini. La tria 
 | **Diagnòstic** | Instantània que vincula públic i troballes amb font, període, base, regla i limitació. Registra si la calibració correspon al públic exacte, és context d’un públic més ampli o és insuficient. Cada troballa té un identificador i es classifica com a senyal mesurat, risc o dades insuficients. Una versió referencia el diagnòstic que va motivar les adaptacions. |
 | **Versió de consulta** | Clau `(campanya, número de versió)`, estat, títol, introducció, preguntes i ordre, branca, temps estimat, proposta de difusió i registre d’aprovació. L’aprovació fixa també el públic, la finestra i les restriccions que s’han revisat. |
 | **Pregunta** | Dins la versió, identificador estable, posició, enunciat, tipus, opcions, obligatorietat i condició de salt si escau. Les dues preguntes de referència conserven la seva definició entre onades. |
-| **Publicació** | Enllaç entre una versió aprovada i un formulari de Typeform, amb identificador extern únic, URL i correspondència entre camps externs i preguntes. El QR deriva de la URL. Proposta de demo: un formulari per onada i una versió per formulari. |
-| **Resposta depurada** | Vinculada a la versió que s’ha respost. Identificador tècnic, origen, finestra de recollida, respostes per identificador de pregunta i torn declarat opcional. Pot incloure text depurat o només etiquetes temàtiques. Els imports de Typeform són únics per `(formulari, codi extern de resposta)`. Si s’habilita l’aparellament, conserva també un identificador intern de participació limitat a la sèrie. Les fixtures tenen claus i orígens propis. |
+| **Publicació** | Vincula una versió aprovada a un formulari de Typeform amb mapatge estable. La plataforma ofereix un QR per a l’accés autoritzat i un QR directe per obrir Typeform. El formulari de contingència té un origen propi. |
+| **Resposta depurada** | Versió, origen, finestra i respostes normalitzades. Unicitat tècnica `(formulari, resposta externa)` i unicitat restringida `(pseudònim, onada)`. El vincle de cicle permet aparellar onades. Les fixtures tenen origen separat i RRHH rep agregats. |
 | **Resultat i evidència** | Instantània d’una onada amb període, segment, base, origen de les dades, regles d’anàlisi i diagnòstic històric aplicable. Cada troballa publicable té un identificador estable dins la instantània. L’acció conserva la referència a la troballa exacta encara que s’actualitzi el dashboard. |
 | **Acció seleccionada** | Campanya d’origen, troballes publicables, acció concreta, rol responsable suggerit i punt a comprovar. Proposta de demo: una acció seleccionada per campanya, que dona lloc a un únic esborrany de seguiment. |
 
@@ -61,14 +63,14 @@ flowchart LR
 
 ## Regles de mesura, privacitat i IA
 
-- **Participació.** Taxa aparent = respostes vàlides del segment / població elegible del mateix segment i període. Amb un QR compartit, el codi extern identifica una tramesa. El torn sense declarar compta al total autoritzat i queda fora dels numeradors per torn. Si falten denominadors, la representativitat queda desconeguda. Si el numerador supera la població, es marca una incidència i se suprimeix la taxa.
+- **Participació.** La calibració voluntària històrica conserva la taxa aparent. Les onades noves calculen respostes autoritzades acceptades sobre credencials elegibles del mateix públic i període, sense garantir la identitat física ni representativitat. Si falta el denominador o el numerador el supera, no es mostra taxa. No s’exposen recomptes de recollides obertes.
 - **Composició.** El pes d’un torn a la mostra i el seu pes a la població s’han de calcular sobre el mateix conjunt de torns. Si hi ha torns sense declarar, es mostra la base de torns coneguts quan és publicable i s’explica la limitació. El diagnòstic distingeix el desequilibri observat de la seva possible causa.
 - **Contrast històric.** El percentatge de cada puntuació es calcula sobre les respostes vàlides a la pregunta en cada recollida. La diferència als extrems és el percentatge de puntuacions 1 o 5 de la voluntària menys el de la referència, en punts percentuals. Calen el mateix públic elegible, pregunta i escala i un període comparable. Entre plantes es pot comparar la magnitud del contrast quan els protocols siguin equivalents. Un avís de patró recurrent requereix diversos sondejos comparables.
 - **Aplicació del context.** Associar la calibració pel sector i la ubicació. Si l’onada apunta a un torn i només hi ha dades de tota la fàbrica, indicar l’abast ampli de la referència. Sense calibració pertinent, retornar «Dades insuficients». El contrast de setembre aporta context a les interpretacions i es mostra separat de les mètriques de l’onada, que conserven els valors observats.
-- **Protecció de resultats.** Aplicar `n ≥ 10` al servidor sobre la base efectiva de cada tall, mètrica i tema. Cada tema compta trameses diferents. Fer servir vistes predefinides i ocultar talls addicionals o agrupar si el total o altres talls permeten reconstruir una cel·la protegida. Aplicar la mateixa comprovació a les comparacions i actualitzacions visibles. Al dashboard arriben únicament agregats autoritzats i indicadors d’insuficiència.
+- **Protecció de resultats.** Aplicar `n ≥ 10` a cada tall, mètrica, tema i parella, protegint complements petits. La publicació local és una única instantània final i immutable quan RRHH tanca l’onada; es bloquegen imports posteriors. No s’envien cel·les protegides al navegador. No hi ha filtres arbitraris.
 - **Text lliure.** Abans de persistir text per a l’anàlisi o enviar-lo a la IA, eliminar dades identificatives o descartar el comentari si hi ha dubte. La resta de la resposta pot continuar sent vàlida. Els identificadors tècnics, el text cru i les metadades alienes al cas queden fora de les sortides i dels logs.
-- **Comparació entre onades.** Comprensió i suport mantenen identificador, text, ordre, obligatorietat i escala d’1 a 5 a cada onada, amb «No ho puc valorar» com a categoria separada. Aquest valor queda fora del càlcul d’escala. Només mostrar la tendència directa si les preguntes són equivalents, el públic i el protocol són comparables i la base és publicable a cada onada. Mostrar les limitacions per canvis de composició o cobertura. La referència de l’acció és la primera microconsulta del canvi.
-- **Comparació aparellada.** El servidor pot enllaçar puntuacions de la mateixa sèrie amb un codi opcional i calcular quants parells pugen, es mantenen o baixen. La vista de RRHH i l’entrada del LLM són agregades. [Regles de recuperació i aparellament](contracte-analisi-llm.md#comparació-amb-enquestes-anteriors)
+- **Comparació entre onades.** Comprensió i suport mantenen la definició completa i la posició, amb «No ho puc valorar» separat. Les bases de cada onada es mostren separadament i s’expliquen els canvis de composició o cobertura. La referència per defecte és la primera onada de la sèrie.
+- **Comparació aparellada.** El servidor enllaça puntuacions vàlides de la mateixa sèrie quan el públic i el protocol són comparables. Aplica el llindar a parelles i pèrdues i calcula quants parells pugen, es mantenen o baixen. RRHH i el LLM reben agregats. La calibració històrica es manté separada. [Regles de recuperació i aparellament](contracte-analisi-llm.md#comparació-amb-enquestes-anteriors)
 - **Traçabilitat de la IA.** Validar estructura, restriccions, identificadors i suport semàntic abans de mostrar un bloc generat. Les accions només poden citar evidència publicable. Si la base és insuficient per sustentar una acció sobre el canvi, la sortida pot proposar millorar la recollida si hi ha evidència que ho justifiqui. [Protocol d’interpretació](protocol-interpretacio-llm.md)
 
 ## Comprovació amb dades sintètiques

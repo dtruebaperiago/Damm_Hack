@@ -1,0 +1,4 @@
+interface:
+  display_name: "Estrella Damm Brandkit"
+  short_description: "Identitat visual i veu per a prototips Estrella Damm"
+  default_prompt: "Aplica $estrella-damm-brandkit a aquesta peça, distingint les fonts oficials de les propostes de prototip."

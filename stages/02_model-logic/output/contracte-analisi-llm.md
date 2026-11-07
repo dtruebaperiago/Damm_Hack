@@ -120,6 +120,8 @@ Per al primer tall, un **flux fix al servidor** fa d’orquestrador. El motor an
 
 ### Comparació amb enquestes anteriors
 
+Aquest apartat defineix les vistes de seguiment i el guió de demo. L’aplicació web actual utilitza credencials sintètiques i un pseudònim limitat al cicle per autoritzar la recollida. [Contracte de la implementació web](../../../docs/implementation.md)
+
 El seguiment pren per defecte la primera onada de la sèrie. RRHH pot escollir una altra onada anterior autoritzada i compatible. El primer prototip recupera onades guardades a l’eina i deixa la importació d’enquestes externes per a una fase posterior. El servidor recupera la versió del formulari, les respostes depurades encara disponibles i les metadades de públic, finestra i recollida. Per a cada ítem, verifica que el concepte, l’enunciat, l’ordre, l’escala i les seves etiquetes, l’obligatorietat i la branca siguin equivalents. Si l’ítem té IDs diferents en formularis anteriors, cal una correspondència explícita revisada per l’equip. La coincidència d’ID per si sola és insuficient. Si només es conserven agregats, el sistema pot comparar mostres quan són compatibles.
 
 | Vista | Com es calcula | Què veu RRHH |
