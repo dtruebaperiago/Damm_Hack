@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000" role="img" aria-labelledby="title desc" xml:lang="ca">
+  <title id="title">Escolta activa Damm · Model conceptual</title>
+  <desc id="desc">Un sondeig sintètic aporta senyals de biaix i riscos al disseny de la consulta. RRHH tria el públic, revisa l’esborrany generat amb IA i l’aprova abans de publicar-lo. La plantilla respon per QR amb Typeform. La plataforma depura les respostes, analitza agregats i proposa accions. RRHH tria una acció i inicia una consulta de seguiment amb dues preguntes comparables.</desc>
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Arial, sans-serif; }
+      .eyebrow { font-size: 15px; font-weight: 700; letter-spacing: 2px; }
+      .headline { fill: #272322; font-size: 55px; font-weight: 750; letter-spacing: -1.6px; }
+      .subhead { fill: #514943; font-size: 23px; }
+      .title { fill: #272322; font-size: 27px; font-weight: 700; }
+      .body { fill: #514943; font-size: 19px; }
+      .note { font-size: 16px; font-weight: 600; }
+      .role { font-size: 14px; font-weight: 750; letter-spacing: 1.3px; }
+      .num { fill: #fff; font-size: 15px; font-weight: 700; text-anchor: middle; }
+      .human { fill: #962b3c; }
+      .model { fill: #215875; }
+      .platform { fill: #28604e; }
+      .flow { fill: none; stroke: #6c6056; stroke-width: 2.4; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0L10 5L0 10L2.5 5Z" fill="#6c6056" />
+    </marker>
+    <marker id="loop-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0L10 5L0 10L2.5 5Z" fill="#962b3c" />
+    </marker>
+  </defs>
+
+  <rect width="1440" height="1000" fill="#faf7f1" />
+  <rect width="1440" height="9" fill="#962b3c" />
+
+  <g id="capcalera">
+    <text x="80" y="64" class="eyebrow human">REPTE DAMM · MODEL CONCEPTUAL</text>
+    <text x="80" y="121" class="headline">Escolta activa del clima laboral</text>
+    <text x="80" y="159" class="subhead">Del sondeig a l’acció i a la consulta de seguiment</text>
+    <rect x="1108" y="55" width="252" height="91" rx="14" fill="#f3e6d8" />
+    <text x="1127" y="85" class="role human">ESCENARI A</text>
+    <text x="1127" y="117" class="body" font-weight="650">Canvi de torns a planta</text>
+  </g>
+
+  <g id="sondeig-i-diagnostic">
+    <rect x="80" y="197" width="1280" height="128" rx="18" fill="#f1ebe0" stroke="#ded4c6" />
+    <text x="104" y="229" class="role human">PUNT DE PARTIDA</text>
+    <text x="104" y="267" class="title">Sondeig sintètic</text>
+    <text x="104" y="298" class="body">Respostes i població elegible per grup</text>
+
+    <path d="M447 263H497" class="flow" />
+    <text x="524" y="229" class="role model">CONTEXT PER A LA CONSULTA</text>
+    <text x="524" y="267" class="title">Diagnòstic de biaixos</text>
+    <text x="524" y="298" class="body">Senyals mesurats, riscos i dades que falten</text>
+
+    <rect x="968" y="212" width="376" height="98" rx="12" fill="#faf7f1" />
+    <text x="987" y="239" class="role platform">EXEMPLE SINTÈTIC · PLANTA</text>
+    <text x="987" y="269" class="body" font-weight="700">Participació aparent</text>
+    <text x="987" y="294" class="note platform">55% al torn de dia · 15% al torn de nit</text>
+  </g>
+
+  <g id="fletxes-del-cicle" aria-hidden="true">
+    <path d="M720 325V361" class="flow" />
+    <path d="M479 456H517" class="flow" />
+    <path d="M923 456H961" class="flow" />
+    <path d="M1164 541V592" class="flow" />
+    <path d="M961 686H923" class="flow" />
+    <path d="M517 686H479" class="flow" />
+    <path d="M276 772V821Q276 833 264 833H59Q45 833 45 819V470Q45 456 59 456H74" fill="none" stroke="#962b3c" stroke-width="2.4" stroke-dasharray="7 6" marker-end="url(#loop-arrow)" />
+  </g>
+
+  <g id="definir" transform="translate(80 370)">
+    <rect width="392" height="172" rx="16" fill="#fff" stroke="#d9b7b9" />
+    <circle cx="38" cy="33" r="15" class="human" />
+    <text x="38" y="38" class="num">1</text>
+    <text x="64" y="38" class="role human">RRHH</text>
+    <text x="23" y="81" class="title">Definir la necessitat</text>
+    <text x="23" y="114" class="body">Objectiu, context i límits de la consulta</text>
+    <text x="23" y="143" class="note human">Tria sector, ubicació i torn a Planta</text>
+  </g>
+
+  <g id="adaptar" transform="translate(524 370)">
+    <rect width="392" height="172" rx="16" fill="#edf4f8" stroke="#b4cbd8" />
+    <circle cx="38" cy="33" r="15" class="model" />
+    <text x="38" y="38" class="num">2</text>
+    <text x="64" y="38" class="role model">IA</text>
+    <text x="23" y="81" class="title">Adaptar la microconsulta</text>
+    <text x="23" y="114" class="body">Preguntes, to i proposta de distribució</text>
+    <text x="23" y="143" class="note model">3–6 preguntes · menys de 2 minuts</text>
+  </g>
+
+  <g id="aprovar" transform="translate(968 370)">
+    <rect width="392" height="172" rx="16" fill="#fff" stroke="#d9b7b9" />
+    <circle cx="38" cy="33" r="15" class="human" />
+    <text x="38" y="38" class="num">3</text>
+    <text x="64" y="38" class="role human">RRHH</text>
+    <text x="23" y="81" class="title">Revisar i aprovar</text>
+    <text x="23" y="114" class="body">Edita i valida l’esborrany</text>
+    <text x="23" y="143" class="note human">Aprovació obligatòria per publicar</text>
+  </g>
+
+  <g id="participar" transform="translate(968 600)">
+    <rect width="392" height="172" rx="16" fill="#edf4ee" stroke="#b9cfc3" />
+    <circle cx="38" cy="33" r="15" class="platform" />
+    <text x="38" y="38" class="num">4</text>
+    <text x="64" y="38" class="role platform">TYPEFORM I PLANTILLA</text>
+    <text x="23" y="81" class="title">Publicar i participar</text>
+    <text x="23" y="114" class="body">QR real per respondre des del mòbil</text>
+    <text x="23" y="143" class="note platform">Quiosc compartit com a extensió</text>
+  </g>
+
+  <g id="analitzar" transform="translate(524 600)">
+    <rect width="392" height="172" rx="16" fill="#edf4f8" stroke="#b4cbd8" />
+    <circle cx="38" cy="33" r="15" class="model" />
+    <text x="38" y="38" class="num">5</text>
+    <text x="64" y="38" class="role model">PLATAFORMA I IA</text>
+    <text x="23" y="81" class="title">Analitzar i recomanar</text>
+    <text x="23" y="114" class="body">Mostra, participació, temes i tendències</text>
+    <text x="23" y="143" class="note model">Accions vinculades a evidència agregada</text>
+  </g>
+
+  <g id="actuar" transform="translate(80 600)">
+    <rect width="392" height="172" rx="16" fill="#fff" stroke="#d9b7b9" />
+    <circle cx="38" cy="33" r="15" class="human" />
+    <text x="38" y="38" class="num">6</text>
+    <text x="64" y="38" class="role human">RRHH</text>
+    <text x="23" y="81" class="title">Actuar i fer seguiment</text>
+    <text x="23" y="114" class="body">Tria una acció i obre un nou esborrany</text>
+    <text x="23" y="143" class="note human">Mateix públic i condicions de mesura</text>
+  </g>
+
+  <text x="301" y="838" class="note human">El seguiment conserva dues preguntes fixes: comprensió i suport.</text>
+
+  <g id="privacitat">
+    <rect x="80" y="875" width="1280" height="86" rx="16" fill="#224e41" />
+    <text x="104" y="906" class="role" fill="#d4e9dc">PRIVACITAT I SUPERVISIÓ</text>
+    <text x="104" y="936" font-size="18" fill="#fff">Dades sintètiques · Text depurat abans de la IA · Resultats agregats amb n ≥ 10 · Decisions de RRHH</text>
+  </g>
+</svg>

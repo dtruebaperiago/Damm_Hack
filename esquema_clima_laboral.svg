@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1150" width="100%" height="100%" style="background-color: #f8fafc; font-family: 'Inter', system-ui, sans-serif;">
+  <!-- Defs for arrows and shadows -->
+  <defs>
+    <!-- Drop shadows -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.05" />
+    </filter>
+    <filter id="shadow-sm" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08" />
+    </filter>
+    
+    <!-- Arrow heads -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669" />
+    </marker>
+  </defs>
+
+  <!-- TITLE: Proposta de valor -->
+  <g transform="translate(50, 50)">
+    <text x="0" y="0" fill="#0f172a" font-size="28" font-weight="800" letter-spacing="-0.5">Cicle d'Escoltes Actives (Proposta de valor)</text>
+    <text x="0" y="28" fill="#475569" font-size="16" font-weight="500">Plataforma que personalitza enquestes per simplificar i automatitzar la feina de RRHH,</text>
+    <text x="0" y="50" fill="#475569" font-size="16" font-weight="500">tancant el cicle des de la necessitat fins a l'acció contínua.</text>
+    <line x1="0" y1="75" x2="1100" y2="75" stroke="#e2e8f0" stroke-width="2" />
+  </g>
+
+  <!-- BLOCK 1: Enquestes de sondeig -->
+  <g transform="translate(50, 140)">
+    <text x="0" y="20" fill="#1e293b" font-size="20" font-weight="700">Necessitat de l'Àrea (Enquestes de sondeig)</text>
+    
+    <!-- Flecha lateral a biaixos -->
+    <path d="M 430 14 L 480 14" stroke="#475569" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Biaixos Box -->
+    <rect x="495" y="-15" width="455" height="85" rx="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5" filter="url(#shadow)" />
+    <text x="515" y="18" fill="#991b1b" font-size="18" font-weight="800">Biaixos a superar</text>
+    <text x="515" y="42" fill="#7f1d1d" font-size="14.5">de cobertura (format de les enquestes), no resposta, autoselecció,</text>
+    <text x="515" y="64" fill="#7f1d1d" font-size="14.5">segmentació, moment, desitjabilitat social, neteja d'outliers.</text>
+
+    <!-- Flecha cap avall: Inferència estadística -->
+    <path d="M 100 40 L 100 120" stroke="#475569" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4 4" />
+    <rect x="105" y="65" width="220" height="30" fill="#f8fafc" />
+    <text x="115" y="85" fill="#64748b" font-size="15" font-weight="500" font-style="italic">Generació amb suport IA</text>
+  </g>
+
+  <!-- BLOCK 2: Plataforma Generadora -->
+  <g transform="translate(50, 270)">
+    <!-- Main Platform Box -->
+    <rect x="0" y="0" width="850" height="85" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" filter="url(#shadow)" />
+    <text x="25" y="35" fill="#1e40af" font-size="19" font-weight="700">Plataforma que genera enquestes hiper-personalitzades</text>
+    <text x="25" y="62" fill="#1d4ed8" font-size="16" font-weight="500">(Adaptant to i preguntes per departament, localització, torn...)</text>
+
+    <!-- Alert box for Biases (Target Validation) -->
+    <path d="M 400 85 L 400 125" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)" />
+    <rect x="90" y="125" width="760" height="60" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="2" stroke-dasharray="6" filter="url(#shadow-sm)" />
+    <text x="110" y="150" fill="#c2410c" font-size="16" font-weight="700">⚠️ Validació de Target:</text>
+    <text x="290" y="149" fill="#9a3412" font-size="15">Avisa a RRHH de possibles biaixos i calcula la representativitat</text>
+    <text x="110" y="171" fill="#9a3412" font-size="15">esperada segons el col·lectiu abans d'enviar.</text>
+
+    <!-- Flecha cap a Validació Humana -->
+    <path d="M 100 185 L 100 230" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)" />
+  </g>
+
+  <!-- NEW BLOCK: Validació Humana -->
+  <g transform="translate(50, 510)">
+    <rect x="90" y="0" width="760" height="60" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="2" filter="url(#shadow-sm)" />
+    <text x="110" y="25" fill="#047857" font-size="16" font-weight="700">👤 Aprovació obligatòria de RRHH (Control Humà):</text>
+    <text x="510" y="25" fill="#065f46" font-size="15">La persona de RRHH revisa i edita.</text>
+    <text x="110" y="47" fill="#065f46" font-size="15">La IA no publica mai la microconsulta sense que la persona n'hagi donat el seu vist i plau explícit.</text>
+    
+    <!-- Flecha cap a Canals -->
+    <path d="M 100 60 L 100 100" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)" />
+  </g>
+
+  <!-- BLOCK 3: Canals i Participació -->
+  <g transform="translate(50, 620)">
+    <!-- Branca Teams -->
+    <path d="M 100 0 L 100 20 L 130 20" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <rect x="140" y="2" width="110" height="36" rx="6" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow-sm)" />
+    <text x="165" y="25" fill="#334155" font-size="15" font-weight="600">Teams</text>
+
+    <!-- Branca QR (Logística/Planta) -->
+    <path d="M 100 20 L 100 75 L 130 75" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <rect x="140" y="57" width="220" height="36" rx="6" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow-sm)" />
+    <text x="155" y="80" fill="#334155" font-size="15" font-weight="600">QR (Planta / Logística)</text>
+
+    <!-- Branca Pantalla in-situ -->
+    <path d="M 100 75 L 100 130 L 130 130" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <rect x="140" y="112" width="160" height="36" rx="6" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow-sm)" />
+    <text x="160" y="135" fill="#334155" font-size="15" font-weight="600">Pantalla in-situ</text>
+
+    <!-- Branca Altres -->
+    <path d="M 100 130 L 100 185 L 130 185" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <text x="160" y="193" fill="#64748b" font-size="24" font-weight="700">...</text>
+
+    <!-- Clau lateral dreta (Personalització) -->
+    <path d="M 380 20 L 400 20 L 400 102 L 420 102 L 400 102 L 400 185 L 380 185" stroke="#94a3b8" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="440" y="107" fill="#475569" font-size="16" font-weight="500" font-style="italic">Publicació estratègica per no saturar la plantilla</text>
+    
+    <!-- Flecha Feedback cap a Privacitat -->
+    <path d="M 100 205 L 100 250" stroke="#1e293b" stroke-width="3" marker-end="url(#arrow)" />
+    
+    <!-- Label Feedback on the arrow -->
+    <rect x="110" y="210" width="180" height="30" fill="#f8fafc" />
+    <text x="120" y="230" fill="#334155" font-size="17" font-weight="700">Participació / Dades</text>
+  </g>
+
+  <!-- NEW BLOCK: Filtre d'Anonimització -->
+  <g transform="translate(50, 880)">
+    <rect x="90" y="0" width="760" height="75" rx="10" fill="#f5f3ff" stroke="#a855f7" stroke-width="2" filter="url(#shadow-sm)" />
+    <text x="110" y="30" fill="#6b21a8" font-size="16" font-weight="700">🔒 Filtre d'anonimització i agregació (Seguretat):</text>
+    <text x="495" y="30" fill="#7e22ce" font-size="15">S'elimina automàticament qualsevol</text>
+    <text x="110" y="55" fill="#7e22ce" font-size="15">dada identificativa de comentaris lliures i s'aplica el llindar mínim per no revelar perfils únics.</text>
+    
+    <!-- Flecha cap a Analítica -->
+    <path d="M 100 75 L 100 115" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)" />
+  </g>
+
+  <!-- BLOCK 4: Tancament i Output -->
+  <g transform="translate(50, 1005)">
+    <rect x="0" y="0" width="850" height="90" rx="12" fill="#f0fdf4" stroke="#4ade80" stroke-width="2" filter="url(#shadow)" />
+    <text x="25" y="38" fill="#166534" font-size="19" font-weight="800">La plataforma agrupa respostes, extreu insights segurs, els mostra</text>
+    <text x="25" y="66" fill="#166534" font-size="19" font-weight="800">al dashboard i genera suggerències d'actuació a RRHH.</text>
+    
+    <!-- Icon/Accent inside the success box -->
+    <circle cx="800" cy="45" r="20" fill="#dcfce7" />
+    <path d="M 792 45 L 798 51 L 810 39" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+
+  <!-- CYCLE CLOSING ARROW (The loop) -->
+  <g>
+    <!-- Line starts from the right of Block 4 (Output), goes up to Block 2 (Platform generation) -->
+    <path d="M 900 1050 L 1150 1050 L 1150 312 L 915 312" stroke="#059669" stroke-width="3" fill="none" marker-end="url(#arrow-green)" />
+    
+    <!-- Text accompanying the return arrow -->
+    <text x="1135" y="660" fill="#047857" font-size="16" font-weight="700" text-anchor="end">RRHH agafa les suggerències</text>
+    <text x="1135" y="682" fill="#047857" font-size="16" font-weight="700" text-anchor="end">i les usa per fer una nova</text>
+    <text x="1135" y="704" fill="#047857" font-size="16" font-weight="700" text-anchor="end">consulta de seguiment</text>
+  </g>
+</svg>

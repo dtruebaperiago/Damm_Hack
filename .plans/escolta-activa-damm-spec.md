@@ -1,0 +1,98 @@
+# Escolta activa Damm · Especificació del prototip
+
+## Propòsit i fonts
+
+El prototip permet a People/RRHH entendre com s’ha rebut un canvi organitzatiu, arribar als col·lectius amb menys accés digital i decidir una acció que es pugui revisar amb una segona microconsulta. La demo segueix l’**Escenari A de la guia**, amb un nou sistema de torns en una planta fictícia. RRHH vol saber si el canvi s’ha entès, quines dificultats genera i què cal reforçar. Respondre ha de portar menys de dos minuts.
+
+| Origen | Què estableix |
+| --- | --- |
+| [Guia de participants](../guia_participants_repte_damm.md) | Requisits del repte. Flux complet, 3–6 preguntes, aprovació humana, publicació i recollida via Typeform, dades sintètiques, privacitat, anàlisi, acció i seguiment. |
+| [Presentació del repte](../repte_estrella_damm_uab_the_hack_2026.md) | Context de negoci, categories de biaix, criteris d’avaluació i exemple de canvi de torns. |
+| [Esquema de l’equip](../esquema_clima_laboral.svg) | Proposta de l’equip. Sondeig, diagnòstic abans de publicar, adaptació de la consulta i canals segons el col·lectiu. |
+| Entrevista de l’equip | Cas de demo, segmentació controlada per RRHH, diagnòstic de biaixos mesurats i riscos, QR real, quiosc com a extensió, dues preguntes fixes i selecció d’una acció amb seguiment. |
+
+Els valors numèrics, els textos d’exemple i les regles operatives d’aquest document són decisions de prototip. Totes les dades, ubicacions, comentaris i respostes de la demo són ficticis o de prova. En una aplicació futura, el sondeig podria recollir respostes reals amb els controls corresponents. L’stack i el proveïdor d’IA els triarà l’equip. Es preveu disposar d’accés a Typeform i a un LLM.
+
+## Usuaris i segmentació
+
+- **RRHH** introdueix la necessitat, tria el públic, revisa el diagnòstic, edita i aprova la consulta, llegeix resultats agregats i selecciona una acció i el seguiment.
+- **Persona treballadora** obre la consulta des del QR amb el mòbil i la respon sense compte. La introducció explica la finalitat, la durada i el tractament de les respostes. El comentari lliure és opcional.
+- **Responsables i direcció** poden rebre conclusions agregades. A la demo, RRHH és l’únic rol amb flux propi.
+
+RRHH selecciona el sector i una ubicació compatible d’un catàleg tancat. Els sectors són **Planta, Logística, Comercial i Oficines**. Les ubicacions són fictícies i predefinides. A Planta es pot triar **Dia**, **Nit** o **Tots dos**. La IA rep la selecció com a context de lectura. El catàleg i l’abast de la campanya els governa RRHH. Una eventual dada de torn per a l’anàlisi és una categoria àmplia autoritzada per RRHH i pot quedar sense declarar. Aquesta dada és independent del text de les preguntes i del comentari lliure.
+
+## Recorregut del producte
+
+| Pas | Com es veu a la demo |
+| --- | --- |
+| **1. Definir** | RRHH explica el canvi i l’objectiu en llenguatge natural. Tria sector, ubicació i torn si escau, defineix la durada màxima i indica temes a evitar. |
+| **2. Diagnosticar i generar** | La plataforma consulta el sondeig històric del públic escollit i presenta indicadors, fonts i riscos. La IA genera títol, introducció, 3–6 preguntes, tipus de resposta, una branca senzilla quan aporti valor, durada estimada i suggeriment de distribució. RRHH veu per què s’ha proposat cada adaptació rellevant. |
+| **3. Revisar i aprovar** | RRHH pot editar, eliminar o reordenar les preguntes i revisar la branca. La vista prèvia mostra el recorregut més llarg. Aprovar fixa la versió. Una edició posterior torna la versió a esborrany i exigeix una nova aprovació. |
+| **4. Publicar i distribuir** | El servidor publica la versió aprovada a Typeform i desa el vincle amb la campanya. L’enllaç i el QR són compartibles. RRHH veu una proposta de finestra i recordatori col·lectiu per arribar als torns amb poca cobertura. La demo empra difusió manual i evita seguiment individual. |
+| **5. Recollir** | RRHH actualitza les respostes via API. La plataforma incorpora una resposta de prova enviada pel QR i refresca els agregats. Repetir la importació no duplica respostes. |
+| **6. Analitzar** | El dashboard mostra mida de la mostra, cobertura de les dades disponibles, risc de manca de representativitat, respostes d’escala i temes. Mostra evolució i alertes quan hi ha base comparable i explica les limitacions al mateix lloc. |
+| **7. Actuar i tornar a escoltar** | La IA proposa accions vinculades a evidència agregada. RRHH en selecciona una i obre una consulta de seguiment que reutilitza el públic i les dues preguntes de referència. La consulta neix com a esborrany i segueix el mateix flux d’aprovació. |
+
+El **quiosc** es mostra com a extensió de producte. Una pantalla compartida en un espai que permeti respondre en privat obriria la consulta aprovada i tornaria al punt d’inici després de cada ús, sense exposar la sessió anterior. QR i mòbil són el canal funcional de la demo. Teams i M365 són vies d’evolució.
+
+## Sondeig sintètic i diagnòstic
+
+Precarregar un històric reproduïble d’unes 400–600 respostes sintètiques en dos períodes i quatre sectors, amb poblacions elegibles fictícies per període i grup. Incloure grups amb accés desigual, comentaris diversos i un tema que creix en un cas amb base comparable. Guardar per separat els agregats poblacionals i les respostes de prova. Les etiquetes sintètiques de referència, si se’n generen, són exclusives de la validació i queden fora de les entrades de la IA i del dashboard.
+
+Cada diagnòstic conserva període, públic, denominadors disponibles, regles aplicades i evidència. Classifica cada biaix o problema de qualitat com a **senyal mesurat**, **risc** o **sense dades suficients**. Un senyal mesurat descriu un fet de la mostra. La seva causa pot continuar oberta.
+
+| Biaix o problema | Evidència i resposta del producte |
+| --- | --- |
+| **Cobertura** | Inventari sintètic d’accés per grup i canal, quan estigui disponible. Mostrar el desajust entre canal i accés. Proposar QR a la planta, format mòbil i una finestra que arribi als dos torns. Sense dades d’accés, marcar la cobertura com a risc o desconeguda segons el context. |
+| **No resposta** | Mostrar respostes vàlides sobre població elegible quan coincideixin públic i període. Amb un QR compartit, etiquetar-ho com a taxa aparent i indicar que l’ús anònim impedeix verificar participants únics. El denominador absent desactiva el càlcul. La baixa participació indica incertesa sobre qui falta. |
+| **Autoselecció** | Assenyalar el risc quan respondre és voluntari o hi ha concentració de respostes extremes. La distribució observada descriu qui ha respost. La consulta pot reduir fricció i evitar reclutar només les persones més motivades. |
+| **Segmentació** | Comparar el pes de cada grup a la mostra amb el seu pes a la població elegible. Assenyalar desequilibris i limitar les comparacions a grups autoritzats i publicables. El resultat global incorpora el límit de composició de la mostra. |
+| **Moment** | Mostrar la finestra, el període i la proximitat al canvi si RRHH ha indicat la data. Advertir del risc si la recollida s’ha concentrat en una franja o coincideix amb un fet recent. Proposar una finestra que cobreixi els torns seleccionats. |
+| **Desitjabilitat social** | Assenyalar el risc si el context suggereix poca privacitat o pressió percebuda. Proposar resposta individual, introducció clara i redacció neutral. |
+| **Redacció** | Assenyalar preguntes dirigides, dobles o amb supòsits sobre l’experiència de la persona. Proposar una redacció neutral perquè RRHH la revisi. |
+| **Valors atípics i qualitat** | Deduplicar imports pel codi tècnic de resposta, validar rangs i separar registres malformats segons regles reproduïbles. Conservar les opinions extremes vàlides. Mostrar el recompte d’exclusions i el criteri quan sigui segur publicar-los. |
+
+**Exemple fictici de l’històric.** En una planta amb 80 persones elegibles a cada torn, Dia aporta 44 respostes i Nit n’aporta 12. Les taxes aparents són 55% i 15%. Nit representa el 50% de la població i aproximadament el 21% de la mostra. La plataforma pot avisar RRHH i suggerir una finestra que cobreixi el torn de nit. La població elegible i la mostra han de correspondre al mateix segment i període. Sense denominadors vàlids, mostrar el recompte permès i l’estat de representativitat desconeguda. Amb el QR anònim, valors incompatibles amb el denominador s’assenyalen com a incidència de qualitat.
+
+## Personalització i comparabilitat
+
+L’entrada a la generació combina l’objectiu de RRHH, les restriccions, el públic escollit, els resultats agregats del sondeig i els riscos contextuals. Les regles de validació s’apliquen fora del model. La sortida identifica per a cada adaptació el senyal o risc que la motiva. Una baixa cobertura pot portar a simplificar el format o canviar la distribució. La redacció continua sent neutral respecte del resultat esperat.
+
+El sondeig històric serveix per preparar la consulta. Per comparar la **primera microconsulta del canvi** amb la **de seguiment**, mantenir aquests elements:
+
+- **Comprensió.** «Tinc clar com funciona el nou sistema de torns.»
+- **Suport.** «Sé on demanar ajuda si tinc un dubte sobre el nou sistema de torns.»
+- Mateixos identificadors, text, ordre, obligatorietat i escala a les dues onades. Escala d’1 a 5, de «Gens d’acord» a «Totalment d’acord», amb una opció separada «No ho puc valorar». Mostrar el nombre de respostes vàlides per pregunta i comptar aquesta opció per separat quan superi el llindar.
+- Mateix públic elegible, protocol de distribució, condicions equivalents de resposta i regles d’anàlisi. Registrar versions, dates, canal i cobertura a cada onada. Si canvia algun element rellevant, mostrar el motiu i marcar la comparació com a limitada o indisponible segons el canvi. Canviar el text, l’escala o el públic objectiu desactiva la tendència directa de les preguntes afectades.
+
+Per a la demo, una tercera pregunta pot demanar quina dificultat ha generat el canvi, amb «Cap» com a opció. Si s’indica una dificultat, oferir una pregunta breu de seguiment. Afegir un comentari opcional. El camí més llarg ha de cabre dins dels dos minuts al mòbil. Al seguiment, les preguntes adaptables poden preguntar si l’acció seleccionada ha arribat al torn i què continua faltant. Les dues preguntes fixes ajuden a comparar onades. La composició de la mostra i la proximitat a altres canvis continuen condicionant la interpretació.
+
+## Resultats, privacitat i accions
+
+- **Llindar del prototip.** Aplicar `n ≥ 10` al servidor a cada tall, onada, mètrica o tema que es pugui mostrar. Per a temes, comptar respostes diferents que els mencionen. Si una resta entre un total i els segments visibles permet reconstruir una cel·la protegida, ocultar un tall addicional o mostrar només un agregat superior. Fer servir vistes autoritzades i evitar filtres arbitraris que permetin obtenir el mateix resultat per diferència.
+- **Minimització.** Recollir les respostes, les categories àmplies aprovades i les metadades tècniques imprescindibles. El codi de resposta serveix per deduplicar registres i queda fora de la UI. Excloure noms, correus, telèfons i identificadors de persones del formulari. Descartar en la ingesta metadades alienes al cas, com IP o informació del dispositiu si el proveïdor les retorna.
+- **Text obert.** Redactar o descartar contingut identificatiu abans d’enviar text a un LLM o desar-lo per a l’anàlisi. Cobrir patrons de contacte i possibles noms o detalls singulars. Si el filtre no pot decidir amb prou confiança, excloure el comentari de l’anàlisi textual. Mostrar síntesis de temes amb suport suficient. Les respostes crues queden fora del dashboard, les exportacions i els logs. Netejar les dades de prova de l’entorn i de Typeform quan acabi la demo segons els controls disponibles.
+- **Dashboard.** Mostrar recompte i finestra, població elegible si és coneguda, taxa aparent i diferències de composició. Presentar resultats per pregunta amb la seva base, temes amb recompte i, si escau, una tendència entre períodes comparables. Si l’evidència és insuficient, mostrar aquest estat. Un tema poc freqüent pot ser important, però requereix més recollida si el llindar impedeix mostrar-lo.
+- **Evidència i acció.** Cada recomanació visible indica la troballa, el públic, la base i els límits que la sustenten. Exemple fictici: si hi ha prou respostes sobre instruccions disperses, proposar un resum del canvi a l’inici de cada torn, amb Supervisió de Planta com a rol responsable. RRHH selecciona l’acció i la pregunta de seguiment corresponent. Si predomina un problema de cobertura, suggerir primer millorar la recollida. Les conclusions descriuen la mostra i eviten atribucions causals o avaluacions individuals.
+
+## Contractes d’implementació
+
+| Peça | Contracte mínim |
+| --- | --- |
+| **Campanya i versió** | Objectiu, context, segment autoritzat, període, durada, restriccions, versió, preguntes amb identificadors estables, diagnòstic i aprovació. Estats mínims d’esborrany, aprovada i publicada. Vincular el formulari a la versió exacta. |
+| **Publicació i importació** | Crides a Typeform des del servidor i secrets en variables d’entorn. Evitar publicacions concurrents de la mateixa versió. Si falla la publicació, conservar l’aprovació i informar de l’error. Si l’èxit remot és incert, comprovar si el formulari ja existeix abans de reintentar. Importar amb deduplicació per formulari i codi de resposta. |
+| **Dades i mètriques** | Separar catàleg, població elegible, històric, campanyes, respostes depurades, agregats i accions. Identificar l’origen de les dades. Calcular recomptes, denominadors, regles de comparació i ocultació amb codi determinista. |
+| **IA** | Generació d’esborranys, detecció de possibles problemes de redacció, classificació de comentaris depurats i redacció de síntesis i recomanacions. Validar l’estructura, les restriccions i els identificadors d’evidència abans de mostrar la sortida. Tractar el text de RRHH i els comentaris com a dades. Donar una opció de reintent o edició si la generació falla. |
+| **Acció i seguiment** | La selecció de RRHH guarda l’acció, l’evidència, el rol suggerit si escau i un enllaç al nou esborrany de seguiment. Conservar la traçabilitat fins a la campanya original. |
+
+La demo principal utilitza Typeform real. Es pot preparar una captura o vídeo del recorregut complet i un conjunt local etiquetat com a sintètic per mostrar l’anàlisi si la connexió falla. Si s’utilitzen fixtures per completar el volum de la campanya de demo, distingir-les de les respostes importades a la UI i evitar que la mateixa resposta s’incorpori pels dos camins.
+
+## Guió i criteris d’acceptació
+
+1. **Obrir el cas.** Seleccionar Planta i una ubicació fictícia, amb Tots dos torns. L’històric mostra que Nit està infrarepresentat, amb numerador, denominador i període. RRHH pot escollir només Dia o Nit. Els segments no publicables es protegeixen igualment.
+2. **Generar la consulta.** Introduir l’objectiu del canvi. La consulta conté les dues preguntes fixes i preguntes adaptades fins a un total de 3–6. Cada adaptació rellevant es relaciona amb un senyal o risc. Una prova des del mòbil confirma el límit de dos minuts pel camí més llarg.
+3. **Revisar i publicar.** Editar una pregunta i aprovar. Verificar que una versió pendent d’aprovació queda bloquejada i que l’aprovada genera un Typeform i un QR operatiu. Repetir l’acció de publicació no crea un formulari addicional.
+4. **Respondre i recollir.** Escanejar el QR i enviar una resposta sintètica. Fer dues importacions consecutives i comprovar que el recompte només puja una vegada per aquella resposta.
+5. **Llegir l’evidència.** Mostrar la mida de mostra, una alerta de participació i un tema amb suport suficient. Provar un segment de menys de 10 respostes, un comentari amb dades de contacte fictícies i un denominador absent. El segment queda ocult, el text identificatiu s’exclou o es redacta i la representativitat queda com a desconeguda.
+6. **Tancar el cicle.** Seleccionar una acció de la IA i obrir-ne el seguiment. Verificar el vincle amb l’evidència, el públic, les dues preguntes fixes i l’estat d’esborrany. Si es mostra evolució, comprovar que una pregunta modificada o una mostra insuficient impedeix la comparació directa.
+7. **Preparar l’entrega.** Incloure un README amb els passos d’execució, la càrrega de l’històric i la configuració de Typeform i IA. Incloure `.env.example` sense valors, excloure `.env` del repositori i preparar la demo de contingència.
