@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000" role="img" aria-labelledby="title desc" xml:lang="ca">
   <title id="title">Escolta activa Damm · Model conceptual</title>
-  <desc id="desc">Un sondeig sintètic aporta senyals de biaix i riscos al disseny de la consulta. RRHH tria el públic, revisa l’esborrany generat amb IA i l’aprova abans de publicar-lo. La plantilla respon per QR amb Typeform. La plataforma depura les respostes, analitza agregats i proposa accions. RRHH tria una acció i inicia una consulta de seguiment amb dues preguntes comparables.</desc>
+  <desc id="desc">La calibració històrica sintètica compara 600 respostes de referència amb 240 respostes voluntàries. La voluntària té un 37,9% de puntuacions extremes i la referència un 17,3%. El diagnòstic ajuda RRHH a adaptar la difusió segons cobertura i moment. RRHH aprova la microconsulta i la plantilla respon per QR amb Typeform. La plataforma contextualitza els resultats amb el risc històric de no resposta i autoselecció. RRHH tria una acció i inicia una consulta de seguiment amb dues preguntes comparables.</desc>
   <defs>
     <style>
       text { font-family: 'Segoe UI', Arial, sans-serif; }
@@ -40,18 +40,18 @@
   <g id="sondeig-i-diagnostic">
     <rect x="80" y="197" width="1280" height="128" rx="18" fill="#f1ebe0" stroke="#ded4c6" />
     <text x="104" y="229" class="role human">PUNT DE PARTIDA</text>
-    <text x="104" y="267" class="title">Sondeig sintètic</text>
-    <text x="104" y="298" class="body">Respostes i població elegible per grup</text>
+    <text x="104" y="267" class="title">Calibració històrica</text>
+    <text x="104" y="298" class="body">Referència completa i voluntària</text>
 
     <path d="M447 263H497" class="flow" />
-    <text x="524" y="229" class="role model">CONTEXT PER A LA CONSULTA</text>
+    <text x="524" y="229" class="role model">CONTEXT PER A RRHH</text>
     <text x="524" y="267" class="title">Diagnòstic de biaixos</text>
     <text x="524" y="298" class="body">Senyals mesurats, riscos i dades que falten</text>
 
     <rect x="968" y="212" width="376" height="98" rx="12" fill="#faf7f1" />
-    <text x="987" y="239" class="role platform">EXEMPLE SINTÈTIC · PLANTA</text>
-    <text x="987" y="269" class="body" font-weight="700">Participació aparent</text>
-    <text x="987" y="294" class="note platform">55% al torn de dia · 15% al torn de nit</text>
+    <text x="987" y="239" class="role platform">FÀBRICA FICTÍCIA · SETEMBRE</text>
+    <text x="987" y="269" class="body" font-weight="700">Puntuacions extremes (1 o 5)</text>
+    <text x="987" y="294" class="note platform">17,3% referència · 37,9% voluntària</text>
   </g>
 
   <g id="fletxes-del-cicle" aria-hidden="true">
@@ -80,7 +80,7 @@
     <text x="38" y="38" class="num">2</text>
     <text x="64" y="38" class="role model">IA</text>
     <text x="23" y="81" class="title">Adaptar la microconsulta</text>
-    <text x="23" y="114" class="body">Preguntes, to i proposta de distribució</text>
+    <text x="23" y="114" class="body">Preguntes, canal i finestra de difusió</text>
     <text x="23" y="143" class="note model">3–6 preguntes · menys de 2 minuts</text>
   </g>
 
@@ -110,8 +110,8 @@
     <text x="38" y="38" class="num">5</text>
     <text x="64" y="38" class="role model">PLATAFORMA I IA</text>
     <text x="23" y="81" class="title">Analitzar i recomanar</text>
-    <text x="23" y="114" class="body">Mostra, participació, temes i tendències</text>
-    <text x="23" y="143" class="note model">Accions vinculades a evidència agregada</text>
+    <text x="23" y="114" class="body">Resultats amb el context històric</text>
+    <text x="23" y="143" class="note model">Risc de no resposta i autoselecció</text>
   </g>
 
   <g id="actuar" transform="translate(80 600)">

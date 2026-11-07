@@ -13,11 +13,12 @@ L’[estudi d’IA](../../IA%20en%20Enquestes%20de%20Clima.md) serveix per contr
 
 1. Identifica els requisits obligatoris a la guia.
 2. Concreta l’escenari, els usuaris i el recorregut que l’equip demostrarà. Separa el recorregut principal de les extensions.
+3. Fixa el cas sintètic de calibració i quan s’utilitza el diagnòstic al llarg del recorregut.
 
 ## Sortida
 
-- [Especificació del prototip](../../.plans/escolta-activa-damm-spec.md) · document de partida ja redactat per l’equip.
+- [Especificació del prototip](../../.plans/escolta-activa-damm-spec.md) · abast, dades de calibració i guió de demo.
 
 ## Check
 
-L’equip recorre el guió de l’especificació i confirma que cobreix el flux mínim de la guia, des de la necessitat fins a la microconsulta de seguiment. La definició documentada alimenta l’esborrany de l’etapa 02.
+L’equip recorre el guió de l’especificació i confirma que cobreix el flux mínim de la guia, des de la necessitat fins al seguiment. Comprova que el públic, la pregunta i les bases del contrast històric són explícits i que el guió el distingeix de l’evidència sobre el canvi de torns. La definició documentada alimenta l’esborrany de l’etapa 02.

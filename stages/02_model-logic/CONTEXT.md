@@ -11,7 +11,7 @@ Obre la presentació, l’esquema o l’estudi d’IA a través del [contracte d
 
 1. Identifica actors, dades, relacions i estats a partir del recorregut de la demo.
 2. Escriu les regles d’aprovació, importació, privacitat i comparació. Delimita què decideix RRHH, què calcula el sistema i què proposa la IA.
-3. Comprova el recorregut amb un cas sintètic i identifica les decisions pendents abans de prototipar.
+3. Comprova el recorregut amb el cas sintètic de l’especificació. Verifica la selecció de la calibració pel públic, el càlcul del contrast i la separació entre agregats històrics i resultats de la campanya. Identifica les decisions pendents abans de prototipar.
 
 ## Sortida
 
