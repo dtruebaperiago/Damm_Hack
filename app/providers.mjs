@@ -156,6 +156,7 @@ export function typeformClient(token, fetcher = requestJSON) {
     });
   return {
     create: (body) => call("/forms", "POST", body),
+    webhook: (id,url,secret) => call(`/forms/${encodeURIComponent(id)}/webhooks/escolta`, 'PUT', {url,secret,enabled:true,verify_ssl:true,event_types:{form_response:true,form_response_partial:false}}),
     definition: (id) => call(`/forms/${encodeURIComponent(id)}`),
     async find(title) {
       const matches = [];

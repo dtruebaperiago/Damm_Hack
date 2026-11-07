@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { PGlite } from "@electric-sql/pglite";
 import { createApplication } from "../app/server.mjs";
 import { template } from "./fixtures.mjs";
 
-test("Typeform links browser responses within one series using temporary delivery references", async (t) => {
+for (const backend of ["SQLite", "PostgreSQL"]) test(`${backend}: Typeform links browser responses within one series using temporary delivery references`, async (t) => {
   const origin = "https://escolta.example";
-  const { server, store } = createApplication({
+  const { server, store } = await createApplication({
+    ...(backend === "PostgreSQL" ? { postgres: new PGlite() } : {}),
     dbPath: ":memory:", mode: "connected", origin,
     secret: "test-only-secret", adminPassword: "test-password", typeformToken: "test-token",
   });
@@ -22,7 +24,7 @@ test("Typeform links browser responses within one series using temporary deliver
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(async () => {
     await new Promise((resolve) => server.close(resolve));
-    store.db.close();
+    await store.db.close();
   });
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (path, body, cookie = "") => fetchLocal(base + path, {
@@ -32,14 +34,14 @@ test("Typeform links browser responses within one series using temporary deliver
   });
   const login = await post("/api/login", { password: "test-password" });
   const admin = login.headers.getSetCookie()[0].split(";")[0];
-  function publish(id, cycle, parent = null) {
-    store.createWave({
+  async function publish(id, cycle, parent = null) {
+    await store.createWave({
       titol: id, objectiu: "Escoltar", decisio: "Fer seguiment", context: "Prova",
       sector: "Planta", ubicacio: "Planta de demo", torn: "Tots dos", dies: 7,
     }, { id, cycle, parent, survey: template });
-    store.approve(id, 1);
-    store.startPublish(id);
-    store.finishPublish(id, id, `https://example.typeform.com/to/${id}`);
+    await store.approve(id, 1);
+    await store.startPublish(id);
+    await store.finishPublish(id, id, `https://example.typeform.com/to/${id}`);
   }
   async function open(id, series = "") {
     const auth = await post(`/api/participate/${id}/auth`, {}, series);
@@ -64,23 +66,30 @@ test("Typeform links browser responses within one series using temporary deliver
     response_id, hidden: { delivery }, submitted_at: new Date(timestamp).toISOString(),
     answers: [{ field: { ref: "comprensio" }, choice: { ref: "comprensio__4" } }],
   });
-  publish("first", "series-one");
+  await publish("first", "series-one");
   const first = await open("first");
-  const submitted = Date.now();
-  store.db.prepare("UPDATE deliveries SET expires_at=? WHERE wave_id='first'").run(submitted);
+  const submitted = Date.now() - 31 * 60000;
+  const wave = await store.wave("first");
+  wave.config.opens = submitted - 60000;
+  await store.db.prepare("UPDATE waves SET config=? WHERE id='first'").run(JSON.stringify(wave.config));
+  await store.db.prepare("UPDATE deliveries SET created_at=?, expires_at=? WHERE wave_id='first'").run(submitted - 60000, submitted + 1000);
+  await store.cleanup();
   remoteResponses.set("first", [
     response("valid", first.delivery, submitted),
     response("direct", undefined, submitted),
   ]);
   assert.equal((await post("/api/campaigns/first/import", {}, admin)).status, 200);
   assert.equal((await post("/api/campaigns/first/import", {}, admin)).status, 200);
-  assert.equal(store.rows("first").length, 1);
-  assert.equal(store.rows("first")[0].torn, "Desconegut");
-  assert.equal(store.rows("first")[0].answers.comprensio.value, "4");
+  assert.equal((await store.rows("first")).length, 1);
+  assert.equal((await store.rows("first"))[0].torn, "Desconegut");
+  assert.equal((await store.rows("first"))[0].answers.comprensio.value, "4");
   assert.equal((await post("/api/participate/first/auth", {}, first.browser)).status, 409);
-  store.close("first");
+  await store.close("first");
+  assert.equal((await post("/api/campaigns/first/import", {}, admin)).status, 409);
+  await store.cleanup();
+  assert.equal((await store.rows("first")).length, 1);
 
-  publish("followup", "series-one", "first");
+  await publish("followup", "series-one", "first");
   const followup = await open("followup", first.browser);
   const reset = await open("followup");
   assert.equal(followup.browser, first.browser);
@@ -91,11 +100,12 @@ test("Typeform links browser responses within one series using temporary deliver
     response("other-wave-token", first.delivery, Date.now()),
   ]);
   assert.equal((await post("/api/campaigns/followup/import", {}, admin)).status, 200);
-  const followupRows = store.rows("followup");
+  const followupRows = await store.rows("followup");
   assert.equal(followupRows.length, 2);
-  assert.equal(followupRows.filter((row) => row.participant === store.rows("first")[0].participant).length, 1);
+  const firstRows = await store.rows("first");
+  assert.equal(followupRows.filter((row) => row.participant === firstRows[0].participant).length, 1);
 
-  publish("other", "series-two");
+  await publish("other", "series-two");
   const other = await open("other", first.browser);
   assert.notEqual(other.browser.split("=")[0], first.browser.split("=")[0]);
 });

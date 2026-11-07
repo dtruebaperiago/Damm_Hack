@@ -4,33 +4,55 @@ import { Store } from '../app/store.mjs';
 import { generateSurvey } from '../app/providers.mjs';
 import { template } from './fixtures.mjs';
 const need={titol:'Acollida',objectiu:'Entendre la incorporació',decisio:'Millorar la primera setmana',context:'Personal nou de logística',sector:'Logística',ubicacio:'Magatzem de demo',torn:'Dia',dies:7};
-test('new campaigns have no questions, insights or historical fixtures and cannot be approved',()=>{
- const s=new Store(':memory:',{secret:'synthetic',mode:'demo'});
+test('new campaigns have no questions, insights or historical fixtures and cannot be approved',async()=>{
+ const s=await new Store(':memory:',{secret:'synthetic',mode:'demo'}).init();
  try {
-  assert.deepEqual(s.list(),[]);
+  assert.deepEqual(await s.list(),[]);
   const { objectiu, sector, ubicacio, torn, dies } = need;
-  const w=s.createWave({ objectiu, sector, ubicacio, torn, dies });
+  const w=await s.createWave({ objectiu, sector, ubicacio, torn, dies });
   assert.equal(w.config.titol, objectiu);
   assert.equal(w.config.context, "");
   assert.equal(w.config.decisio, "");
   assert.deepEqual(w.survey.preguntes,[]);
   assert.equal(w.survey.titol,'');
   assert.deepEqual(w.config.conceptes,[]);
-  assert.deepEqual(s.waveDTO(w.id).diagnostic,[]);
-  assert.deepEqual(s.waveDTO(w.id).proposals,[]);
-  assert.equal(s.calibration({sector:'Planta',ubicacio:'Planta de demo',torn:'Tots dos'}).abast,'insuficient');
-  assert.throws(()=>s.approve(w.id,1),/preguntes|títol/);
- } finally {s.db.close();}
+  assert.deepEqual((await s.waveDTO(w.id)).diagnostic,[]);
+  assert.deepEqual((await s.waveDTO(w.id)).proposals,[]);
+  assert.equal((await s.calibration({sector:'Planta',ubicacio:'Planta de demo',torn:'Tots dos'})).abast,'insuficient');
+  await assert.rejects(()=>s.approve(w.id,1),/preguntes|títol/);
+ } finally {await s.db.close();}
 });
-test('initial generation sends no premade content and preserves every generated question',async t=>{
- const generated=structuredClone(template);
- generated.preguntes=Array.from({length:3},(_,i)=>({id:'acollida_'+i,text:'Com valores la incorporació '+i+'?',que_mesura:'Acollida',quina_decisio_informa:'Millorar la primera setmana',tipus:'seleccio_unica',opcions:[{id:'si',etiqueta:'Sí'},{id:'no',etiqueta:'No'}],obligatoria:false,de_referencia:false,condicio_de_visualitzacio:null}));
- let payload;
- t.mock.method(globalThis,'fetch',async(url,opts)=>{payload=JSON.parse(opts.body);return Response.json({choices:[{message:{content:JSON.stringify(generated)}}]});});
- const result=await generateSurvey(need,{provider:'groq',groqKey:'synthetic',model:'openai/gpt-oss-120b'});
- assert.deepEqual(result.preguntes,generated.preguntes);
- assert.ok(!JSON.stringify(payload).includes('nou sistema de torns'));
- assert.ok(!JSON.stringify(payload).includes('participacio_nit'));
+test("initial generation sends no premade content and preserves every generated question", async (t) => {
+  const generated = structuredClone(template);
+  generated.preguntes = Array.from({ length: 3 }, (_, i) => ({
+    id: "acollida_" + i,
+    text: "Com valores la incorporació " + i + "?",
+    que_mesura: "Acollida",
+    quina_decisio_informa: "Millorar la primera setmana",
+    tipus: "seleccio_unica",
+    opcions: [
+      { id: "si", etiqueta: "Sí" },
+      { id: "no", etiqueta: "No" },
+    ],
+    obligatoria: false,
+    de_referencia: false,
+    condicio_de_visualitzacio: null,
+  }));
+  let payload;
+  t.mock.method(globalThis, "fetch", async (url, opts) => {
+    payload = JSON.parse(opts.body);
+    return Response.json({
+      choices: [{ message: { content: JSON.stringify(generated) } }],
+    });
+  });
+  const result = await generateSurvey(need, {
+    provider: "groq",
+    groqKey: "synthetic",
+    model: "openai/gpt-oss-120b",
+  });
+  assert.deepEqual(result.preguntes, generated.preguntes);
+  assert.ok(!JSON.stringify(payload).includes("nou sistema de torns"));
+  assert.ok(!JSON.stringify(payload).includes("participacio_nit"));
 });
 test('generation repairs an unconditional comment and normalizes equivalent scale options', async (t) => {
   const generated = structuredClone(template);

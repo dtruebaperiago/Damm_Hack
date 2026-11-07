@@ -1,6 +1,6 @@
 # Damm_Hack · Escolta activa
 
-Prototip Node.js 24 + SQLite per crear microconsultes a partir d’una necessitat de People. Les campanyes noves comencen sense preguntes ni insights. La IA genera un esborrany; una aprovació explícita de la versió vigent precedeix la publicació a Typeform.
+Prototip Node.js 24 amb PostgreSQL/Supabase o SQLite local per crear microconsultes a partir d’una necessitat de People. Les campanyes noves comencen sense preguntes ni insights. La IA genera un esborrany; una aprovació explícita de la versió vigent precedeix la publicació a Typeform.
 
 ## Executar
 
@@ -17,8 +17,11 @@ Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a
 | --- | --- |
 | `APP_MODE` | `demo` local o `connected` per publicar a Typeform |
 | `PORT`, `HOST`, `PUBLIC_ORIGIN` | Port, interfície i origen exacte; HTTPS en remot connectat |
-| `DB_PATH` | Base SQLite |
-| `LOAD_SIMULATION` | La demo local carrega l’etapa 03 per defecte. Usa `0` amb una base nova per començar en blanc, o `1` per carregar-la també en mode connectat. |
+| `DB_PATH` | Base SQLite local si `DATABASE_URL` és buit |
+| `DATABASE_URL` | Connexió PostgreSQL/Supabase exclusiva del servidor |
+| `DATABASE_SSL_CA_FILE` | CA pública per TLS verificat: `app/certs/supabase-ca.crt` |
+| `TYPEFORM_WEBHOOK_SECRET` | Secret de signatura de la recepció automàtica |
+| `LOAD_SIMULATION` | La demo local carrega l’etapa 03 per defecte. Usa `0` amb una base nova per començar en blanc, o `1` per carregar-la en mode connectat amb SQLite. Supabase no carrega simulacions a l’arrencada. |
 | `ADMIN_PASSWORD` | Obligatòria en connectat, mínim 8 caràcters |
 | `HMAC_SECRET` | Obligatòria en connectat, mínim 32 caràcters; estable durant el cicle |
 | `LLM_PROVIDER` | `groq` o `openai` |
@@ -58,7 +61,7 @@ pnpm check
 python tests/browser.py
 ```
 
-23 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats.
+36 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats.
 
 `python tests/live-survey.py` és una prova optativa amb efectes reals: utilitza les claus locals, genera amb Groq i publica una consulta sintètica a Typeform. Requereix una instància connectada amb base buida i `LIVE_ORIGIN` (per defecte http://127.0.0.1:3002). No és part de `pnpm test`. Les captures i JSON de prova es desen a `test-results/`, exclòs de Git.
 
@@ -71,3 +74,8 @@ Fonts: [Groq JSON](https://console.groq.com/docs/structured-outputs), [Typeform 
 [Mapa ICM](CONTEXT.md) · [Especificació](.plans/escolta-activa-damm-spec.md) · [Model lògic](stages/02_model-logic/output/model-logic.md) · [Contracte d’implementació](docs/implementation.md).
 
 La revisió humana de les etapes 01 i 02 continua pendent.
+
+
+Connexió compartida: [Supabase i webhook Typeform](docs/postgresql-setup.md). `pnpm db:check` comprova la connexió i prepara les migracions; si la connexió remota falla, el servidor no canvia silenciosament a SQLite.
+
+**Prova real del 8/11/2026:** accés de plataforma → [Typeform de prova](https://form.typeform.com/to/TQfGnETl) → resposta sintètica completada → importació manual → un registre a `escolta.accepted` i un vincle a `escolta.response_links`. Una segona importació manté un únic registre. Valors comprovats i torn `Desconegut`; resultats individuals ocults. Evidència local exclosa de Git: `test-results/typeform-supabase-proof.json`. La recepció automàtica remota continua pendent d’un servidor públic HTTPS.

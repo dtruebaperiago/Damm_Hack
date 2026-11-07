@@ -9,14 +9,17 @@ import {
   randomUUID,
 } from "node:crypto";
 import qr from "qrcode-generator";
+import {
+  verifyTypeformSignature,
+  importTypeformResponse,
+} from "./typeform-ingest.mjs";
 import { Store } from "./store.mjs";
 import { loadSimulation } from "./simulation.mjs";
-import { template, topics } from "./domain.mjs";
+import { template } from "./domain.mjs";
 import {
   AppError,
   typeformClient,
   toTypeform,
-  fromTypeform,
   generateSurvey,
   llmJSON,
 } from "./providers.mjs";
@@ -28,21 +31,21 @@ const cookieValue = (req, key) => {
     .find((s) => s.startsWith(key + "="));
   return pair?.slice(key.length + 1) || "";
 };
-export function createApplication(config) {
-  const store = new Store(config.dbPath, config);
-  if (config.loadSimulation) loadSimulation(store);
+export async function createApplication(config) {
+  const store = await new Store(config.dbPath, config).init();
+  if (config.loadSimulation && !store.db.postgres) await loadSimulation(store);
   const passwordSalt = randomBytes(16),
     passwordHash = scryptSync(config.adminPassword, passwordSalt, 32);
   const secure = new URL(config.origin).protocol === "https:";
   const cookie = (name, value, maxAge, path = "/") =>
     `${name}=${value}; Path=${path}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
-  const auth = (req) => {
+  const auth = async (req) => {
     const token = cookieValue(req, "ea_admin");
     if (
       !token ||
-      !store.db
+      !(await store.db
         .prepare("SELECT 1 FROM sessions WHERE token_hash=? AND expires_at>?")
-        .get(store.hash(token), Date.now())
+        .get(store.hash(token), Date.now()))
     )
       throw new AppError("Accedeix a l’espai de People per continuar.", 401);
   };
@@ -78,10 +81,11 @@ export function createApplication(config) {
         path = url.pathname;
       if (req.method === "GET" && path === "/api/health")
         return send(200, { ok: true, mode: config.mode });
+      const webhook = path === "/api/webhooks/typeform";
       let body = {};
       if (req.method === "POST") {
         if (
-          req.headers.origin !== config.origin ||
+          (!webhook && req.headers.origin !== config.origin) ||
           !req.headers["content-type"]?.startsWith("application/json")
         )
           throw new AppError(
@@ -96,20 +100,55 @@ export function createApplication(config) {
             throw new AppError("La petició és massa gran.", 413);
           chunks.push(chunk);
         }
+        const raw = Buffer.concat(chunks);
+        if (
+          webhook &&
+          !verifyTypeformSignature(
+            raw,
+            req.headers["typeform-signature"],
+            config.typeformWebhookSecret,
+          )
+        )
+          throw new AppError("Signatura Typeform no vàlida.", 403);
         try {
-          body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          body = JSON.parse(raw.toString("utf8"));
         } catch {
           throw new AppError("JSON invàlid.");
         }
         if (!body || typeof body !== "object" || Array.isArray(body))
           throw new AppError("Cal un objecte JSON.");
-        store.rateLimit(`api:${req.socket.remoteAddress}`, 400);
+        await store.rateLimit(`api:${req.socket.remoteAddress}`, 400);
       } else if (req.method !== "GET")
         throw new AppError("Mètode no permès.", 405);
+      if (webhook) {
+        if (req.method !== "POST") throw new AppError("Mètode no permès.", 405);
+        const item = body.form_response;
+        if (
+          body.event_type === "form_response" &&
+          typeof item?.form_id === "string"
+        ) {
+          const found = await store.db
+            .prepare("SELECT id FROM waves WHERE form_id=?")
+            .get(item.form_id);
+          if (found) {
+            const w = await store.wave(found.id);
+            // Persist before acknowledging. LLM calls stay outside the webhook deadline.
+            await importTypeformResponse(
+              store,
+              w,
+              item,
+              item.definition || {},
+              config,
+              { classify: false },
+            );
+          }
+        }
+        return send(200, { received: true });
+      }
       if (path === "/api/session") {
         let authenticated = true;
         try {
-          auth(req);
+          await auth(req);
         } catch {
           authenticated = false;
         }
@@ -118,8 +157,11 @@ export function createApplication(config) {
           mode: config.mode,
           integrations: {
             typeform: !!config.typeformToken,
-            llm: !!(config.provider==='groq'?config.groqKey:config.openaiKey) && !!config.model,
-            provider: config.provider||'openai',
+            llm:
+              !!(config.provider === "groq"
+                ? config.groqKey
+                : config.openaiKey) && !!config.model,
+            provider: config.provider || "openai",
           },
           catalog: {
             Planta: "Planta de demo",
@@ -130,7 +172,7 @@ export function createApplication(config) {
         });
       }
       if (path === "/api/login" && req.method === "POST") {
-        store.rateLimit(`admin:${req.socket.remoteAddress}`);
+        await store.rateLimit(`admin:${req.socket.remoteAddress}`);
         if (
           typeof body.password !== "string" ||
           body.password.length > 200 ||
@@ -141,14 +183,14 @@ export function createApplication(config) {
         )
           throw new AppError("No s’ha pogut iniciar la sessió.", 403);
         const token = randomBytes(32).toString("base64url");
-        store.db
+        await store.db
           .prepare("INSERT INTO sessions VALUES(?,?)")
           .run(store.hash(token), Date.now() + 8 * 3600000);
         res.setHeader("Set-Cookie", cookie("ea_admin", token, 28800));
         return send(200, { ok: true });
       }
       if (path === "/api/logout" && req.method === "POST") {
-        store.db
+        await store.db
           .prepare("DELETE FROM sessions WHERE token_hash=?")
           .run(store.hash(cookieValue(req, "ea_admin")));
         res.setHeader("Set-Cookie", cookie("ea_admin", "", 0));
@@ -159,13 +201,13 @@ export function createApplication(config) {
       );
       if (participant) {
         const [, id, action] = participant,
-          w = store.wave(id);
+          w = await store.wave(id);
         if (w.source === "simulation")
           throw new AppError("Aquesta onada és una simulació tancada.", 409);
         if (req.method === "GET" && !action) {
           let admitted = false;
           try {
-            store.checkDelivery(id, cookieValue(req, "ea_participant"));
+            await store.checkDelivery(id, cookieValue(req, "ea_participant"));
             admitted = true;
           } catch {}
           return send(200, {
@@ -188,15 +230,15 @@ export function createApplication(config) {
             const code = /^[A-Za-z0-9_-]{43}$/.test(saved)
               ? saved
               : randomBytes(32).toString("base64url");
-            const token = store.browserDelivery(w, code);
+            const token = await store.browserDelivery(w, code);
             res.setHeader("Set-Cookie", [
               cookie(name, code, 30 * 86400),
               cookie("ea_typeform_delivery", token, 1800, `/go/${id}`),
             ]);
             return send(200, { ok: true, mode: w.source, destination: `/go/${id}` });
           }
-          store.rateLimit(`participant:${req.socket.remoteAddress}`);
-          const token = store.delivery(id, body.credential);
+          await store.rateLimit(`participant:${req.socket.remoteAddress}`);
+          const token = await store.delivery(id, body.credential);
           res.setHeader("Set-Cookie", cookie("ea_participant", token, 1800));
           return send(200, {
             ok: true,
@@ -216,7 +258,7 @@ export function createApplication(config) {
             Array.isArray(body.answers)
           )
             throw new AppError("Calen les respostes del formulari.");
-          store.accept(
+          await store.accept(
             id,
             cookieValue(req, "ea_participant"),
             randomUUID(),
@@ -231,7 +273,7 @@ export function createApplication(config) {
       if (go) {
         const id = go[1],
           token = cookieValue(req, "ea_typeform_delivery") || cookieValue(req, "ea_participant"),
-          { w } = store.checkDelivery(id, token);
+          { w } = await store.checkDelivery(id, token);
         let target = `/participa/${id}`;
         if (w.source === "typeform") {
           const remote = new URL(w.form_url);
@@ -249,26 +291,33 @@ export function createApplication(config) {
         res.writeHead(303, { Location: target });
         return res.end();
       }
-      if(path==='/api/calibration' && req.method==='GET') {
-        auth(req);
-        return send(200,store.calibration({sector:'Planta',ubicacio:'Planta de demo',torn:'Tots dos'}));
+      if (path === "/api/calibration" && req.method === "GET") {
+        await auth(req);
+        return send(
+          200,
+          await store.calibration({
+            sector: "Planta",
+            ubicacio: "Planta de demo",
+            torn: "Tots dos",
+          }),
+        );
       }
       if (path.startsWith("/api/campaigns")) {
-        auth(req);
+        await auth(req);
         if (path === "/api/campaigns") {
           if (req.method === "GET")
-            return send(200, { campaigns: store.list() });
-          const w = store.createWave(body);
-          return send(201, store.waveDTO(w.id));
+            return send(200, { campaigns: await store.list() });
+          const w = await store.createWave(body);
+          return send(201, await store.waveDTO(w.id));
         }
         const match = path.match(
-          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|followup|qr|typeform-qr|export))?$/,
+          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|followup|qr|typeform-qr|webhook|export))?$/,
         );
         if (!match) throw new AppError("Ruta no trobada.", 404);
         const [, id, action] = match;
-        let w = store.wave(id);
+        let w = await store.wave(id);
         if (!action && req.method === "GET")
-          return send(200, store.waveDTO(id));
+          return send(200, await store.waveDTO(id));
         if (["qr", "typeform-qr"].includes(action) && req.method === "GET") {
           if (!w.form_id)
             throw new AppError(
@@ -277,8 +326,15 @@ export function createApplication(config) {
             );
           const code = qr(0, "M");
           if (action === "typeform-qr" && !w.form_url)
-            throw new AppError("Aquesta consulta no té formulari Typeform.", 409);
-          code.addData(action === "typeform-qr" ? w.form_url : `${config.origin}/participa/${id}`);
+            throw new AppError(
+              "Aquesta consulta no té formulari Typeform.",
+              409,
+            );
+          code.addData(
+            action === "typeform-qr"
+              ? w.form_url
+              : `${config.origin}/participa/${id}`,
+          );
           code.make();
           res.setHeader(
             "Content-Disposition",
@@ -303,15 +359,15 @@ export function createApplication(config) {
           return send(200, {
             campanya: w.config.titol,
             public: w.config.public,
-            resultats: store.results(id),
+            resultats: await store.results(id),
           });
         }
         if (req.method !== "POST") throw new AppError("Mètode no permès.", 405);
         if (w.source === "simulation")
           throw new AppError("Aquesta onada és una simulació tancada.", 409);
         if (action === "edit")
-          store.edit(id, body.version, body.survey, body.config);
-        else if (action === "approve") store.approve(id, body.version);
+          await store.edit(id, body.version, body.survey, body.config);
+        else if (action === "approve") await store.approve(id, body.version);
         else if (action === "generate") {
           if (w.state !== "draft")
             throw new AppError("Només es pot generar sobre un esborrany.", 409);
@@ -322,7 +378,7 @@ export function createApplication(config) {
               conceptes: w.config.conceptes,
               context: w.config.context,
               public: w.config.public,
-              sondeig: store.diagnostic(w),
+              sondeig: await store.diagnostic(w),
               restriccions: {
                 temes_exclosos: w.config.exclusions,
                 tractament:
@@ -330,19 +386,19 @@ export function createApplication(config) {
               },
             },
             config,
-            w.parent_id ? store.wave(w.parent_id).survey : template,
+            w.parent_id ? (await store.wave(w.parent_id)).survey : template,
           );
-          store.edit(id, w.version, survey);
+          await store.edit(id, w.version, survey);
         } else if (action === "publish") {
           if (config.mode !== "demo" && !config.typeformToken)
             throw new AppError(
               "Cal configurar TYPEFORM_TOKEN per publicar en mode connectat.",
               503,
             );
-          if (w.form_id) return send(200, store.waveDTO(id));
-          w = store.startPublish(id);
+          if (w.form_id) return send(200, await store.waveDTO(id));
+          w = await store.startPublish(id);
           if (config.mode === "demo")
-            store.finishPublish(id, "local-" + id, null);
+            await store.finishPublish(id, "local-" + id, null);
           else {
             try {
               const form = await tf().create(
@@ -353,13 +409,13 @@ export function createApplication(config) {
                   "La publicació no s’ha pogut confirmar.",
                   503,
                 );
-              store.finishPublish(id, form.id, form._links.display);
+              await store.finishPublish(id, form.id, form._links.display);
             } catch (e) {
               const confirmedFailure =
                 e.remoteStatus >= 400 &&
                 e.remoteStatus < 500 &&
                 e.remoteStatus !== 408;
-              store.db
+              await store.db
                 .prepare(
                   "UPDATE waves SET state=? WHERE id=? AND state='publishing'",
                 )
@@ -368,7 +424,7 @@ export function createApplication(config) {
             }
           }
         } else if (action === "reconcile") {
-          if (w.state !== "uncertain")
+          if (!["uncertain", "publishing"].includes(w.state))
             throw new AppError("No hi ha cap publicació incerta.", 409);
           const form = await tf().find(w.publish_title);
           if (!form)
@@ -396,7 +452,32 @@ export function createApplication(config) {
               "El formulari trobat no coincideix amb la revisió aprovada.",
               409,
             );
-          store.finishPublish(id, form.id, definition._links.display);
+          await store.finishPublish(id, form.id, definition._links.display);
+        } else if (action === "webhook") {
+          if (!w.form_id || w.source !== "typeform")
+            throw new AppError("Publica primer el formulari Typeform.", 409);
+          const origin = new URL(config.origin);
+          if (
+            origin.protocol !== "https:" ||
+            ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)
+          )
+            throw new AppError(
+              "Configura PUBLIC_ORIGIN amb l’URL HTTPS pública de la web per rebre notificacions.",
+              422,
+            );
+          if (
+            !config.typeformWebhookSecret ||
+            config.typeformWebhookSecret.length < 32
+          )
+            throw new AppError(
+              "Configura TYPEFORM_WEBHOOK_SECRET al servidor (mínim 32 caràcters).",
+              503,
+            );
+          await tf().webhook(
+            w.form_id,
+            `${config.origin}/api/webhooks/typeform`,
+            config.typeformWebhookSecret,
+          );
         } else if (action === "import") {
           if (w.state !== "published")
             throw new AppError(
@@ -411,84 +492,17 @@ export function createApplication(config) {
           const client = tf(),
             definition = await client.definition(w.form_id),
             items = await client.responses(w.form_id);
-          for (const item of items) {
-            if (
-              store.db
-                .prepare(
-                  "SELECT 1 FROM accepted WHERE form_id=? AND external_id=?",
-                )
-                .get(w.form_id, item.response_id || item.token)
-            )
-              continue;
-            try {
-              const responseId = store.accept(
-                id,
-                item.hidden?.delivery,
-                item.response_id || item.token,
-                fromTypeform(item, w.survey, definition),
-                "typeform",
-                Date.parse(item.submitted_at),
-              );
-              // Classificació sense tokens ni pseudònims; una fallada conserva la resta de la resposta.
-              if (config.groqKey || config.openaiKey) {
-                const row = store.db
-                    .prepare("SELECT answers FROM accepted WHERE id=?")
-                    .get(responseId),
-                  answers = JSON.parse(row.answers);
-                const texts = Object.entries(answers).filter(([, a]) => a.text);
-                if (texts.length) {
-                  for (const [, a] of texts) a.temes = [];
-                  store.db
-                    .prepare("UPDATE accepted SET answers=? WHERE id=?")
-                    .run(JSON.stringify(answers), responseId);
-                  try {
-                    const classified = await llmJSON(
-                      "classification",
-                      {
-                        elements: texts.map(([qid, a], i) => ({
-                          id: `t${i}`,
-                          text: a.text,
-                        })),
-                      },
-                      config,
-                    );
-                    if (
-                      !Array.isArray(classified.elements) ||
-                      classified.elements.length !== texts.length
-                    )
-                      throw new Error();
-                    for (const [i, [qid, a]] of texts.entries()) {
-                      const item = classified.elements.find(
-                        (x) => x.id === `t${i}`,
-                      );
-                      if (
-                        !item ||
-                        !Array.isArray(item.temes) ||
-                        item.temes.some((t) => !Object.hasOwn(topics, t))
-                      )
-                        throw new Error();
-                      answers[qid].temes = [...new Set(item.temes)];
-                    }
-                    store.db
-                      .prepare("UPDATE accepted SET answers=? WHERE id=?")
-                      .run(JSON.stringify(answers), responseId);
-                  } catch {}
-                }
-              }
-            } catch (e) {
-              if (!(e instanceof AppError))
-                throw e; /* rebutjada o duplicada: fora dels agregats */
-            }
-          }
-        } else if (action === "close") store.close(id);
+          for (const item of items)
+            await importTypeformResponse(store, w, item, definition, config);
+        } else if (action === "close") await store.close(id);
         else if (action === "proposals") {
-          const evidence = store.results(id).evidence;
+          const evidence = (await store.results(id)).evidence;
           if (!evidence.length)
             throw new AppError(
               "Encara no hi ha evidència publicable per proposar accions.",
             );
           if (config.mode !== "demo")
-            store.saveProposals(
+            await store.saveProposals(
               id,
               await llmJSON(
                 "recommendations",
@@ -497,13 +511,13 @@ export function createApplication(config) {
               ),
             );
         } else if (action === "followup") {
-          const child = store.followup(id, body.action);
+          const child = await store.followup(id, body.action);
           return send(200, {
-            ...store.waveDTO(id),
+            ...(await store.waveDTO(id)),
             created_followup: child.id,
           });
         } else throw new AppError("Ruta no trobada.", 404);
-        return send(200, store.waveDTO(id));
+        return send(200, await store.waveDTO(id));
       }
       const staticFiles = {
         "/": "index.html",
@@ -543,10 +557,13 @@ export function createApplication(config) {
       }
       throw new AppError("Pàgina no trobada.", 404);
     } catch (e) {
-      if(e instanceof AppError && e.retryAfter!==undefined)res.setHeader('Retry-After',String(e.retryAfter));
+      if (e instanceof AppError && e.retryAfter !== undefined)
+        res.setHeader("Retry-After", String(e.retryAfter));
       if (!res.headersSent)
         send(e instanceof AppError ? e.status : 500, {
-          ...(e instanceof AppError && e.retryAfter!==undefined?{retryAfter:e.retryAfter}:{}),
+          ...(e instanceof AppError && e.retryAfter !== undefined
+            ? { retryAfter: e.retryAfter }
+            : {}),
           error:
             e instanceof AppError
               ? e.message
@@ -587,8 +604,10 @@ if (
     throw new Error(
       "L’entorn connectat remot exigeix PUBLIC_ORIGIN amb HTTPS.",
     );
-  const { server, store } = createApplication({
+  const { server, store } = await createApplication({
     dbPath,
+    databaseUrl: process.env.DATABASE_URL,
+    databaseCA: process.env.DATABASE_SSL_CA_FILE,
     mode,
     loadSimulation: process.env.LOAD_SIMULATION === "1" ||
       (mode === "demo" && process.env.LOAD_SIMULATION !== "0"),
@@ -596,21 +615,33 @@ if (
     adminPassword,
     origin,
     typeformToken: process.env.TYPEFORM_TOKEN,
+    typeformWebhookSecret: process.env.TYPEFORM_WEBHOOK_SECRET,
     openaiKey: process.env.OPENAI_API_KEY,
-    provider: process.env.LLM_PROVIDER||'openai',
+    provider: process.env.LLM_PROVIDER || "openai",
     groqKey: process.env.GROQ_API_KEY,
-    model: process.env.LLM_PROVIDER==='groq'?(process.env.GROQ_MODEL||'openai/gpt-oss-120b'):process.env.OPENAI_MODEL,
+    model:
+      process.env.LLM_PROVIDER === "groq"
+        ? process.env.GROQ_MODEL || "openai/gpt-oss-120b"
+        : process.env.OPENAI_MODEL,
   });
-  store.cleanup();
-  const timer = setInterval(() => store.cleanup(), 3600000);
+  await store.cleanup();
+  const timer = setInterval(
+    () =>
+      store
+        .cleanup()
+        .catch(() =>
+          console.error("No s’ha pogut completar la neteja periòdica."),
+        ),
+    3600000,
+  );
   timer.unref();
   server.listen(port, process.env.HOST || "127.0.0.1", () =>
     console.log(`Escolta activa · ${mode} · ${origin}`),
   );
   for (const signal of ["SIGINT", "SIGTERM"])
     process.on(signal, () =>
-      server.close(() => {
-        store.db.close();
+      server.close(async () => {
+        await store.db.close();
         process.exit(0);
       }),
     );

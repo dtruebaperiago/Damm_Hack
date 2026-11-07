@@ -7,26 +7,29 @@ import { loadSimulation } from "../app/simulation.mjs";
 const data = new URL("../data/", import.meta.url);
 const dbPath = fileURLToPath(new URL("demo.sqlite", data));
 
-function seedLocalDemo() {
+async function seedLocalDemo() {
   const secretFile = new URL("local-secret", data);
   mkdirSync(data, { recursive: true });
   try {
-    writeFileSync(secretFile, randomBytes(48).toString("hex"), { flag: "wx", mode: 0o600 });
+    writeFileSync(secretFile, randomBytes(48).toString("hex"), {
+      flag: "wx",
+      mode: 0o600,
+    });
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
   }
-  const store = new Store(dbPath, {
+  const store = await new Store(dbPath, {
     mode: "demo",
     secret: readFileSync(secretFile, "utf8"),
-  });
+  }).init();
   try {
-    return loadSimulation(store);
+    return await loadSimulation(store);
   } finally {
-    store.db.close();
+    await store.db.close();
   }
 }
 
-const inserted = seedLocalDemo();
+const inserted = await seedLocalDemo();
 console.log(inserted
   ? `Onades sintètiques de l’etapa 03 afegides a data/demo.sqlite: ${inserted}.`
   : "La base de demo ja conté totes les onades de l’etapa 03.");

@@ -3,14 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "start": "node --env-file-if-exists=.env app/server.mjs",
     "dev": "node --watch --env-file-if-exists=.env app/server.mjs",
     "demo:seed": "node scripts/seed-demo.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check app/server.mjs && node --check public/app.js"
+    "check": "node --check app/server.mjs && node --check app/store.mjs && node --check app/db.mjs && node --check app/typeform-ingest.mjs && node --check public/app.js",
+    "db:check": "node --env-file-if-exists=.env scripts/database.mjs"
   },
-  "dependencies": { "qrcode-generator": "2.0.4" }
+  "dependencies": {
+    "pg": "^8.23.1",
+    "qrcode-generator": "2.0.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15"
+  }
 }

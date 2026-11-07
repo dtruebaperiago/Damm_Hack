@@ -5,7 +5,7 @@ function readSimulation(path) {
   return JSON.parse(readFileSync(new URL(`../stages/03_simulacio/${path}`, import.meta.url), "utf8"));
 }
 
-export function loadSimulation(store) {
+export async function loadSimulation(store) {
   const { onades, kpis, comparacions } = readSimulation("output/demo_web.json");
   const { poblacio, resum } = readSimulation("output/calibracio_resum.json");
   const survey = readSimulation("consulta.json");
@@ -16,8 +16,8 @@ export function loadSimulation(store) {
      VALUES(?,?,?,'closed',?,?,'simulation',?,?,?) ON CONFLICT(id) DO NOTHING`,
   );
 
-  return store.tx(() => {
-    store.db.prepare("INSERT OR IGNORE INTO historical_calibrations VALUES(?,?)").run(
+  return store.tx(async () => {
+    await store.db.prepare("INSERT INTO historical_calibrations VALUES(?,?) ON CONFLICT DO NOTHING").run(
       "setembre-2026",
       JSON.stringify({
         ...audience,
@@ -63,7 +63,7 @@ export function loadSimulation(store) {
         total: kpi.respostes_valides,
         taxa: kpi.participacio_aparent_pct,
         population: config.population,
-        historic: store.calibration(audience),
+        historic: await store.calibration(audience),
         evidence,
         kpi,
         comparacions: comparacions.filter((row) => row.campanya_desti_id === id),
@@ -83,12 +83,12 @@ export function loadSimulation(store) {
         de_referencia: false,
         condicio_de_visualitzacio: null,
       }];
-      inserted += Number(insertWave.run(
+      inserted += Number((await insertWave.run(
         id, wave.campanya_origen_id || null, wave.serie_id, JSON.stringify(config),
         JSON.stringify({ ...survey, preguntes: questions }), JSON.stringify(snapshot),
         next ? JSON.stringify({ ...action, descripcio: next.accio, evidence, followup: next.campanya_id }) : null,
         opens,
-      ).changes);
+      )).changes);
     }
     return inserted;
   });

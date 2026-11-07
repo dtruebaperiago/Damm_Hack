@@ -1,6 +1,6 @@
-import { DatabaseSync } from "node:sqlite";
+import { isDeepStrictEqual } from "node:util";
+import { Database, decodeJSON } from "./db.mjs";
 import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import {
   template,
   validateSurvey,
@@ -22,19 +22,26 @@ const locations = {
 export class Store {
   constructor(path, config) {
     this.settings = config;
-    this.db = new DatabaseSync(path);
-    this.db.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");
-    this.db.exec(
-      readFileSync(
-        new URL("./migrations/001_initial.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    this.db.exec("UPDATE waves SET state='uncertain' WHERE state='publishing'");
+    this.db = new Database(path, config);
   }
-  calibration(audience) {
-    const row=this.db.prepare('SELECT data FROM historical_calibrations WHERE id=?').get('setembre-2026');
-    return historical(audience,row?JSON.parse(row.data):null);
+  async init() {
+    try {
+      await this.db.migrate();
+      if (!this.db.postgres)
+        await this.db.exec(
+          "UPDATE waves SET state='uncertain' WHERE state='publishing'",
+        );
+      return this;
+    } catch (error) {
+      await this.db.close();
+      throw error;
+    }
+  }
+  async calibration(audience) {
+    const row = await this.db
+      .prepare("SELECT data FROM historical_calibrations WHERE id=?")
+      .get("setembre-2026");
+    return historical(audience, row ? decodeJSON(row.data) : null);
   }
   hash(s) {
     return createHash("sha256").update(s).digest("hex");
@@ -46,21 +53,18 @@ export class Store {
       )
       .digest("hex");
   }
-  tx(fn) {
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = fn();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (e) {
-      this.db.exec("ROLLBACK");
-      throw e;
-    }
+  async tx(fn) {
+    return this.db.transaction(fn);
   }
-  wave(id) {
-    const w = this.db.prepare("SELECT * FROM waves WHERE id=?").get(id);
+  async wave(id) {
+    const w = await this.db
+      .prepare(
+        "SELECT * FROM waves WHERE id=?" +
+          (this.db.postgres && this.db.context.getStore() ? " FOR UPDATE" : ""),
+      )
+      .get(id);
     if (!w) throw new AppError("No s’ha trobat la campanya.", 404);
-    return { ...w, config: JSON.parse(w.config), survey: JSON.parse(w.survey) };
+    return { ...w, config: decodeJSON(w.config), survey: decodeJSON(w.survey) };
   }
   validateConfig(c) {
     if (typeof c.objectiu !== "string" || !c.objectiu.trim() || c.objectiu.length > 2000)
@@ -89,24 +93,28 @@ export class Store {
           ? c.exclusions.slice(0, 1000)
           : "Dades que identifiquin persones",
       protocol: "qr-v1",
-      population: Math.round((c.sector==='Planta'?600:120)*(c.torn==='Dia'?.6:c.torn==='Nit'?.4:1)),
+      population: Math.round(
+        (c.sector === "Planta" ? 600 : 120) *
+          (c.torn === "Dia" ? 0.6 : c.torn === "Nit" ? 0.4 : 1),
+      ),
       opens: now(),
       closes: now() + c.dies * 86400000,
     };
   }
-  provision(cycle, config) {
-    const insert = this.db.prepare(
-      "INSERT OR IGNORE INTO credentials VALUES(?,?,?)",
-    );
+  async provision(cycle, config) {
     const count = config.public.sector === "Planta" ? 600 : 120;
-    for (let i = 1; i <= count; i++)
-      insert.run(
-        cycle,
-        this.pseudonym(cycle, `DEMO-${String(i).padStart(4, "0")}`),
-        i <= Math.ceil(count * 0.6) ? "Dia" : "Nit",
-      );
+    const values = Array.from({ length: count }, (_, i) => [
+      cycle,
+      this.pseudonym(cycle, `DEMO-${String(i + 1).padStart(4, "0")}`),
+      i < Math.ceil(count * 0.6) ? "Dia" : "Nit",
+    ]);
+    await this.db
+      .prepare(
+        `INSERT INTO credentials VALUES ${values.map(() => "(?,?,?)").join(",")} ON CONFLICT DO NOTHING`,
+      )
+      .run(...values.flat());
   }
-  createWave(
+  async createWave(
     input,
     {
       id = randomUUID(),
@@ -116,8 +124,8 @@ export class Store {
     } = {},
   ) {
     const c = this.validateConfig(input);
-    this.tx(() => {
-      this.db
+    await this.tx(async () => {
+      await this.db
         .prepare(
           "INSERT INTO waves(id,parent_id,cycle,config,survey,source,created_at) VALUES(?,?,?,?,?,?,?)",
         )
@@ -130,18 +138,18 @@ export class Store {
           this.settings.mode === "demo" ? "local" : "typeform",
           now(),
         );
-      this.provision(cycle, c);
+      await this.provision(cycle, c);
     });
-    return this.wave(id);
+    return await this.wave(id);
   }
-  saveRevision(w) {
-    this.db
-      .prepare("INSERT OR IGNORE INTO revisions VALUES(?,?,?,?,?)")
+  async saveRevision(w) {
+    await this.db
+      .prepare("INSERT INTO revisions VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING")
       .run(w.id, w.version, json(w.survey), json(w.config), w.approved_hash);
   }
-  edit(id, version, survey, configInput) {
-    return this.tx(() => {
-      const w = this.wave(id);
+  async edit(id, version, survey, configInput) {
+    return await this.tx(async () => {
+      const w = await this.wave(id);
       if (!["draft", "approved"].includes(w.state) || w.version !== version)
         throw new AppError(
           "La versió ha canviat o ja està publicada. Torna a obrir la campanya.",
@@ -161,44 +169,46 @@ export class Store {
       let config = w.config;
       if (configInput) {
         config = this.validateConfig(configInput);
-        if (w.parent_id && json(config.public) !== json(w.config.public))
+        if (w.parent_id && !isDeepStrictEqual(config.public, w.config.public))
           throw new AppError(
             "El seguiment ha de conservar el públic original.",
           );
       }
-      this.saveRevision(w);
-      this.db
+      await this.saveRevision(w);
+      await this.db
         .prepare(
           "UPDATE waves SET survey=?,config=?,version=version+1,state='draft',approved_hash=NULL WHERE id=?",
         )
         .run(json(survey), json(config), id);
-      if (json(w.config.public)!==json(config.public)) {
-        this.db.prepare('DELETE FROM credentials WHERE cycle=?').run(w.cycle);
+      if (!isDeepStrictEqual(w.config.public, config.public)) {
+        await this.db
+          .prepare("DELETE FROM credentials WHERE cycle=?")
+          .run(w.cycle);
       }
-      this.provision(w.cycle, config);
-      return this.wave(id);
+      await this.provision(w.cycle, config);
+      return await this.wave(id);
     });
   }
-  approve(id, version) {
-    return this.tx(() => {
-      const w = this.wave(id);
+  async approve(id, version) {
+    return await this.tx(async () => {
+      const w = await this.wave(id);
       if (w.state !== "draft" || w.version !== version)
         throw new AppError("Només es pot aprovar l’esborrany vigent.", 409);
       const errors = validateSurvey(
         w.survey,
-        w.parent_id ? this.wave(w.parent_id).survey : template,
+        w.parent_id ? (await this.wave(w.parent_id)).survey : template,
       );
       if (errors.length) throw new AppError(errors.join(" "));
       const hash = this.hash(json({ survey: w.survey, config: w.config }));
-      this.db
+      await this.db
         .prepare("UPDATE waves SET state='approved',approved_hash=? WHERE id=?")
         .run(hash, id);
-      return this.wave(id);
+      return await this.wave(id);
     });
   }
-  startPublish(id) {
-    return this.tx(() => {
-      const w = this.wave(id);
+  async startPublish(id) {
+    return await this.tx(async () => {
+      const w = await this.wave(id);
       if (w.form_id) return w;
       if (w.state === "uncertain")
         throw new AppError(
@@ -216,39 +226,43 @@ export class Store {
       )
         throw new AppError("L’aprovació no correspon al contingut.", 409);
       const title = `Escolta ${w.id} v${w.version} ${w.approved_hash.slice(0, 8)}`;
-      this.db
+      await this.db
         .prepare(
           "UPDATE waves SET state='publishing',publish_title=? WHERE id=?",
         )
         .run(title, id);
+      return await this.wave(id);
+    });
+  }
+  async finishPublish(id, formId, url) {
+    return this.tx(async () => {
+      const w = await this.wave(id);
+      if (w.state === "published" && w.form_id === formId) return w;
+      if (!["publishing", "uncertain"].includes(w.state))
+        throw new AppError("Publicació fora de seqüència.", 409);
+      await this.db
+        .prepare(
+          "UPDATE waves SET state='published',form_id=?,form_url=? WHERE id=?",
+        )
+        .run(formId, url, id);
       return this.wave(id);
     });
   }
-  finishPublish(id, formId, url) {
-    const w = this.wave(id);
-    if (!["publishing", "uncertain"].includes(w.state))
-      throw new AppError("Publicació fora de seqüència.", 409);
-    this.db
-      .prepare(
-        "UPDATE waves SET state='published',form_id=?,form_url=? WHERE id=?",
-      )
-      .run(formId, url, id);
-    return this.wave(id);
+  async rows(id) {
+    return (
+      await this.db
+        .prepare(
+          "SELECT a.answers,a.source,l.participant,l.shift AS torn FROM accepted a JOIN response_links l ON l.response_id=a.id WHERE a.wave_id=?",
+        )
+        .all(id)
+    ).map((r) => ({ ...r, answers: decodeJSON(r.answers) }));
   }
-  rows(id) {
-    return this.db
-      .prepare(
-        "SELECT a.answers,a.source,l.participant,l.shift AS torn FROM accepted a JOIN response_links l ON l.response_id=a.id WHERE a.wave_id=?",
-      )
-      .all(id)
-      .map((r) => ({ ...r, answers: JSON.parse(r.answers) }));
-  }
-  delivery(id, credential) {
+  async delivery(id, credential) {
     if (typeof credential !== "string" || credential.length > 80)
       throw new AppError("No s’ha pogut autoritzar l’accés.", 403);
-    const w = this.wave(id),
+    const w = await this.wave(id),
       participant = this.pseudonym(w.cycle, credential);
-    const c = this.db
+    const c = await this.db
       .prepare("SELECT shift FROM credentials WHERE cycle=? AND participant=?")
       .get(w.cycle, participant);
     if (
@@ -258,11 +272,11 @@ export class Store {
       !c ||
       (w.config.public.torn !== "Tots dos" &&
         c.shift !== w.config.public.torn) ||
-      this.db
+      (await this.db
         .prepare(
           "SELECT 1 FROM response_links WHERE wave_id=? AND participant=?",
         )
-        .get(id, participant)
+        .get(id, participant))
     )
       throw new AppError(
         "No s’ha pogut autoritzar l’accés. Comprova la credencial i la finestra; potser ja has respost.",
@@ -270,7 +284,7 @@ export class Store {
       );
     return this.issueDelivery(id, participant, c.shift);
   }
-  browserDelivery(w, code) {
+  async browserDelivery(w, code) {
     const opened = now();
     if (
       w.source !== "typeform" ||
@@ -280,15 +294,15 @@ export class Store {
     )
       throw new AppError("Aquesta consulta no està oberta.", 403);
     const participant = this.pseudonym(w.cycle, "browser:" + this.hash(code));
-    if (this.db.prepare("SELECT 1 FROM response_links WHERE wave_id=? AND participant=?")
+    if (await this.db.prepare("SELECT 1 FROM response_links WHERE wave_id=? AND participant=?")
       .get(w.id, participant))
       throw new AppError("Aquest navegador ja ha respost a la consulta.", 409);
     return this.issueDelivery(w.id, participant, "Desconegut");
   }
-  issueDelivery(id, participant, shift) {
+  async issueDelivery(id, participant, shift) {
     const token = randomBytes(32).toString("base64url");
     const issued = now();
-    this.db
+    await this.db
       .prepare("INSERT INTO deliveries VALUES(?,?,?,?,?,?,0)")
       .run(
         this.hash(token),
@@ -300,9 +314,9 @@ export class Store {
       );
     return token;
   }
-  checkDelivery(id, token, submitted = now(), importing = false) {
-    const w = this.wave(id),
-      d = this.db
+  async checkDelivery(id, token, submitted = now(), importing = false) {
+    const w = await this.wave(id),
+      d = await this.db
         .prepare("SELECT * FROM deliveries WHERE token_hash=? AND wave_id=?")
       .get(this.hash(typeof token === "string" ? token : ""), id);
     if (
@@ -323,10 +337,10 @@ export class Store {
       );
     return { w, d };
   }
-  accept(id, token, externalId, answers, source, submitted = now()) {
-    return this.tx(() => {
+  async accept(id, token, externalId, answers, source, submitted = now()) {
+    return await this.tx(async () => {
       // Imports només coneixen el bearer rebut de Typeform; mai el pseudònim.
-      const { w, d } = this.checkDelivery(id, token, submitted, source === "typeform");
+      const { w, d } = await this.checkDelivery(id, token, submitted, source === "typeform");
       if (
         typeof externalId !== "string" ||
         !externalId ||
@@ -335,23 +349,26 @@ export class Store {
         throw new AppError("Referència externa invàlida.");
       const cleaned = normalizeAnswers(w.survey, answers);
       for (const q of w.survey.preguntes)
-        if (q.obligatoria && cleaned[q.id].estat === "omesa")
+        if (
+          q.obligatoria &&
+          ["omesa", "invalida"].includes(cleaned[q.id].estat)
+        )
           throw new AppError("Falta una resposta obligatòria.");
       try {
-        const inserted = this.db
+        const inserted = await this.db
           .prepare(
-            "INSERT INTO accepted(wave_id,form_id,external_id,source,answers,submitted_at) VALUES(?,?,?,?,?,?)",
+            "INSERT INTO accepted(wave_id,form_id,external_id,source,answers,submitted_at) VALUES(?,?,?,?,?,?) RETURNING id",
           )
-          .run(id, w.form_id, externalId, source, json(cleaned), submitted);
-        this.db
+          .get(id, w.form_id, externalId, source, json(cleaned), submitted);
+        await this.db
           .prepare("INSERT INTO response_links VALUES(?,?,?,?)")
-          .run(id, d.participant, inserted.lastInsertRowid, d.shift);
-        this.db
+          .run(id, d.participant, inserted.id, d.shift);
+        await this.db
           .prepare("UPDATE deliveries SET consumed=1 WHERE token_hash=?")
           .run(d.token_hash);
-        return Number(inserted.lastInsertRowid);
+        return Number(inserted.id);
       } catch (e) {
-        if (e.code?.startsWith("ERR_SQLITE"))
+        if (e.code === "23505" || e.code?.startsWith("ERR_SQLITE"))
           throw new AppError(
             "La resposta ja s’ha acceptat per a aquesta onada.",
             409,
@@ -360,13 +377,13 @@ export class Store {
       }
     });
   }
-  close(id) {
-    return this.tx(() => {
-      const w = this.wave(id);
-      if (w.state === "closed") return this.results(id);
+  async close(id) {
+    return await this.tx(async () => {
+      const w = await this.wave(id);
+      if (w.state === "closed") return await this.results(id);
       if (w.state !== "published")
         throw new AppError("Només es pot tancar una onada publicada.", 409);
-      const rows = this.rows(id),
+      const rows = await this.rows(id),
         snapshot = aggregate(
           rows,
           w.config.population,
@@ -387,9 +404,9 @@ export class Store {
         n: safeSources ? n : null,
       }));
       snapshot.closed_at = new Date().toISOString();
-      snapshot.historic = this.calibration(w.config.public);
+      snapshot.historic = await this.calibration(w.config.public);
       if (w.parent_id) {
-        const parent = this.wave(w.parent_id);
+        const parent = await this.wave(w.parent_id);
         snapshot.comparacio = paired(
           {
             survey: parent.survey,
@@ -401,20 +418,20 @@ export class Store {
             public: w.config.public,
             protocol: w.config.protocol,
           },
-          this.rows(parent.id),
+          await this.rows(parent.id),
           rows,
         );
       }
-      this.db
+      await this.db
         .prepare("UPDATE waves SET state='closed',snapshot=? WHERE id=?")
         .run(json(snapshot), id);
       return snapshot;
     });
   }
-  results(id) {
-    const w = this.wave(id);
+  async results(id) {
+    const w = await this.wave(id);
     return w.snapshot
-      ? JSON.parse(w.snapshot)
+      ? decodeJSON(w.snapshot)
       : {
           total: null,
           taxa: null,
@@ -424,15 +441,15 @@ export class Store {
           temes: [],
           evidence: [],
           textos: null,
-          historic: this.calibration(w.config.public),
+          historic: await this.calibration(w.config.public),
           recollint: true,
         };
   }
-  proposals(id) {
-    const w = this.wave(id);
-    if (w.proposals) return JSON.parse(w.proposals);
-    return this.results(id)
-      .evidence.filter((e) => e.tema)
+  async proposals(id) {
+    const w = await this.wave(id);
+    if (w.proposals) return decodeJSON(w.proposals);
+    return (await this.results(id)).evidence
+      .filter((e) => e.tema)
       .flatMap((e) =>
         catalog
           .filter((a) => a.tema === e.tema)
@@ -444,8 +461,8 @@ export class Store {
           })),
       );
   }
-  saveProposals(id, data) {
-    const evidence = this.results(id).evidence;
+  async saveProposals(id, data) {
+    const evidence = (await this.results(id)).evidence;
     if (
       !Array.isArray(data.propostes) ||
       data.propostes.length > 5 ||
@@ -464,65 +481,68 @@ export class Store {
         "La IA ha retornat una proposta sense evidència publicable vàlida.",
       );
     // Només es persisteixen IDs i explicació basada en dades agregades.
-    this.db
-      .prepare("UPDATE waves SET proposals=? WHERE id=?")
-      .run(
-        json(
-          data.propostes.map((p) => ({
-            accio_id: p.accio_id,
-            evidencia_ids: p.evidencia_ids,
-            motiu: p.motiu,
-            origen: "IA connectada · proposta pendent de RRHH",
-          })),
-        ),
-        id,
-      );
-  }
-  followup(id, action) {
-    const found = this.db
-      .prepare("SELECT id FROM waves WHERE parent_id=?")
-      .get(id);
-    if (found) return this.wave(found.id);
-    const w = this.wave(id),
-      p = this.proposals(id).find((p) => p.accio_id === action);
-    if (w.state !== "closed" || !p)
-      throw new AppError("Cal una acció vinculada a evidència publicable.");
-    const a = catalog.find((a) => a.id === action),
-      survey = structuredClone(w.survey);
-    survey.titol = "Seguiment · " + w.survey.titol;
-    const c = w.config;
-    const child = this.createWave(
-      {
-        titol: "Seguiment · " + c.titol,
-        objectiu: c.objectiu,
-        decisio: c.decisio,
-        context: `${c.context}\nAcció seleccionada: ${a.descripcio}`,
-        sector: c.public.sector,
-        ubicacio: c.public.ubicacio,
-        torn: c.public.torn,
-        dies: c.dies,
-        exclusions: c.exclusions,
-      },
-      { cycle: w.cycle, parent: id, survey },
+    await this.db.prepare("UPDATE waves SET proposals=? WHERE id=?").run(
+      json(
+        data.propostes.map((p) => ({
+          accio_id: p.accio_id,
+          evidencia_ids: p.evidencia_ids,
+          motiu: p.motiu,
+          origen: "IA connectada · proposta pendent de RRHH",
+        })),
+      ),
+      id,
     );
-    this.db
-      .prepare("UPDATE waves SET selected_action=? WHERE id=?")
-      .run(
-        json({
-          ...a,
-          evidence: p.evidencia_ids.map((eid) =>
-            this.results(id).evidence.find((e) => e.id === eid),
-          ),
-          followup: child.id,
-        }),
-        id,
-      );
-    return child;
   }
-  waveDTO(id) {
-    const w = this.wave(id),
-      results = this.results(id),
-      child = this.db.prepare("SELECT id FROM waves WHERE parent_id=?").get(id);
+  async followup(id, action) {
+    return this.tx(async () => {
+      const w = await this.wave(id);
+      const found = await this.db
+        .prepare("SELECT id FROM waves WHERE parent_id=?")
+        .get(id);
+      if (found) return await this.wave(found.id);
+      const p = (await this.proposals(id)).find((p) => p.accio_id === action);
+      if (w.state !== "closed" || !p)
+        throw new AppError("Cal una acció vinculada a evidència publicable.");
+      const a = catalog.find((a) => a.id === action),
+        survey = structuredClone(w.survey);
+      survey.titol = "Seguiment · " + w.survey.titol;
+      const c = w.config;
+      const evidence = (await this.results(id)).evidence;
+      const child = await this.createWave(
+        {
+          titol: "Seguiment · " + c.titol,
+          objectiu: c.objectiu,
+          decisio: c.decisio,
+          context: `${c.context}\nAcció seleccionada: ${a.descripcio}`,
+          sector: c.public.sector,
+          ubicacio: c.public.ubicacio,
+          torn: c.public.torn,
+          dies: c.dies,
+          exclusions: c.exclusions,
+        },
+        { cycle: w.cycle, parent: id, survey },
+      );
+      await this.db
+        .prepare("UPDATE waves SET selected_action=? WHERE id=?")
+        .run(
+          json({
+            ...a,
+            evidence: p.evidencia_ids.map((eid) =>
+              evidence.find((e) => e.id === eid),
+            ),
+            followup: child.id,
+          }),
+          id,
+        );
+      return child;
+    });
+  }
+  async waveDTO(id) {
+    const w = await this.wave(id),
+      results = await this.results(id),
+      child = await this.db
+        .prepare("SELECT id FROM waves WHERE parent_id=?")
+        .get(id);
     return {
       id: w.id,
       parent_id: w.parent_id,
@@ -536,81 +556,86 @@ export class Store {
       results,
       diagnostic: this.diagnostic(w),
       proposals:
-        this.settings.mode === "demo" || w.proposals ? this.proposals(id) : [],
-      selected_action: w.selected_action ? JSON.parse(w.selected_action) : null,
+        this.settings.mode === "demo" || w.proposals
+          ? await this.proposals(id)
+          : [],
+      selected_action: w.selected_action ? decodeJSON(w.selected_action) : null,
       followup: child?.id || null,
     };
   }
-  list() {
-    return this.db
+  async list() {
+    const records = await this.db
       .prepare("SELECT id FROM waves ORDER BY created_at DESC,id")
-      .all()
-      .map(({ id }) => {
-        const w = this.waveDTO(id);
-        return {
-          id,
-          state: w.state,
-          version: w.version,
-          titol: w.config.titol,
-          public: w.config.public,
-          source: w.source,
-          total: w.results.total,
-          taxa: w.results.taxa,
-          days: w.config.dies,
-          parent_id: w.parent_id,
-          has_questions: w.survey.preguntes.length > 0,
-          has_followup: Boolean(w.followup),
-          closes: w.config.closes,
-        };
+      .all();
+    const list = [];
+    for (const { id } of records) {
+      const w = await this.waveDTO(id);
+      list.push({
+        id,
+        state: w.state,
+        version: w.version,
+        titol: w.config.titol,
+        public: w.config.public,
+        source: w.source,
+        total: w.results.total,
+        taxa: w.results.taxa,
+        days: w.config.dies,
+        parent_id: w.parent_id,
+        has_questions: w.survey.preguntes.length > 0,
+        has_followup: Boolean(w.followup),
+        closes: w.config.closes,
       });
+    }
+    return list;
   }
   diagnostic() {
     return [];
   }
-  rateLimit(bucket, limit = 10) {
-    const key = this.hash(bucket),
-      r = this.db.prepare("SELECT * FROM rate_limits WHERE bucket=?").get(key);
-    if (!r || r.expires_at < now()) {
-      this.db
-        .prepare("INSERT OR REPLACE INTO rate_limits VALUES(?,1,?)")
-        .run(key, now() + 15 * 60000);
-      return;
-    }
-    if (r.count >= limit)
+  async rateLimit(bucket, limit = 10) {
+    const time = now();
+    const row = await this.db
+      .prepare(
+        `INSERT INTO rate_limits VALUES(?,1,?)
+      ON CONFLICT(bucket) DO UPDATE SET
+      count=CASE WHEN rate_limits.expires_at<? THEN 1 ELSE rate_limits.count+1 END,
+      expires_at=CASE WHEN rate_limits.expires_at<? THEN excluded.expires_at ELSE rate_limits.expires_at END
+      RETURNING count`,
+      )
+      .get(this.hash(bucket), time + 15 * 60000, time, time);
+    if (row.count > limit)
       throw new AppError(
         "Massa intents. Espera 15 minuts abans de tornar-ho a provar.",
         429,
       );
-    this.db
-      .prepare("UPDATE rate_limits SET count=count+1 WHERE bucket=?")
-      .run(key);
   }
-  cleanup() {
-    this.db.prepare("DELETE FROM sessions WHERE expires_at<?").run(now());
-    this.db.prepare("DELETE FROM rate_limits WHERE expires_at<?").run(now());
-    this.db
+  async cleanup() {
+    await this.db.prepare("DELETE FROM sessions WHERE expires_at<?").run(now());
+    await this.db.prepare("DELETE FROM rate_limits WHERE expires_at<?").run(now());
+    await this.db
       .prepare(`DELETE FROM deliveries WHERE expires_at<? AND wave_id NOT IN
         (SELECT id FROM waves WHERE state='published' AND source='typeform')`)
       .run(now() - 7 * 86400000);
     const cutoff = now() - 30 * 86400000;
     // Purga els registres restringits i l’analítica individual; només resta la instantània agregada final.
-    for (const { id, cycle } of this.db
+    for (const { id, cycle } of await this.db
       .prepare(
         `SELECT id,cycle FROM waves WHERE state='closed' AND
-         CASE WHEN source='typeform' THEN COALESCE(unixepoch(json_extract(snapshot,'$.closed_at')) * 1000, created_at)
+         CASE WHEN source='typeform' THEN ${this.db.postgres ? "COALESCE(EXTRACT(EPOCH FROM (snapshot->>'closed_at')::timestamptz) * 1000, created_at)" : "COALESCE(unixepoch(json_extract(snapshot,'$.closed_at')) * 1000, created_at)"}
          ELSE created_at END < ?`,
       )
       .all(cutoff)) {
-      this.db.prepare("DELETE FROM deliveries WHERE wave_id=?").run(id);
-      this.db.prepare("DELETE FROM accepted WHERE wave_id=?").run(id);
+      await this.db.prepare("DELETE FROM deliveries WHERE wave_id=?").run(id);
+      await this.db.prepare("DELETE FROM accepted WHERE wave_id=?").run(id);
       if (
-        !this.db
+        !(await this.db
           .prepare(
             "SELECT 1 FROM waves WHERE cycle=? AND (state!='closed' OR created_at>=?)",
           )
-          .get(cycle, cutoff)
+          .get(cycle, cutoff))
       )
-        this.db.prepare("DELETE FROM credentials WHERE cycle=?").run(cycle);
+        await this.db
+          .prepare("DELETE FROM credentials WHERE cycle=?")
+          .run(cycle);
     }
   }
 }

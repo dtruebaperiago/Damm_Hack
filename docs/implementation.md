@@ -34,3 +34,21 @@ La petició de l’usuari substitueix la inicialització prefabricada de la demo
 Difusió ofereix dos QR: l’accés de plataforma per autoritzar imports i l’URL Typeform directe per obrir el formulari des d’un mòbil. Les trameses directes sense bearer no entren als agregats de la plataforma. El text lliure es descarta fins que existeixi una depuració de privacitat revisada; s’han retirat les antigues frases i classificacions fixes.
 
 La prova real ha creat https://form.typeform.com/to/k5rLOGmj a partir d’una descripció d’acollida a logística amb Groq. Quatre preguntes, esborrany v2 previ a l’aprovació, lectura posterior de Typeform coincident i QR descodificat al mateix URL. Evidència a `test-results/live-proof.json`. 23 tests Node i el recorregut Chromium passen. La revisió humana de les etapes continua pendent.
+
+## PostgreSQL/Supabase i webhook · 8/11/2026
+
+`DATABASE_URL` selecciona PostgreSQL; buit conserva SQLite local. `app/db.mjs` gestiona el pool pg, TLS verificat, paràmetres, transaccions amb el mateix client i migracions serialitzades a l’esquema privat `escolta`. JSONB es descodifica sense assumir ordre de claus. Les comparacions de públic són estructurals; les escriptures de campanya s’ordenen amb bloqueig de fila i els límits d’intents s’actualitzen atòmicament. No es cancel·la una publicació PostgreSQL en curs quan arrenca una altra instància: es pot reconciliar explícitament.
+
+La persistència i els cridadors passen a ser asíncrons. `createApplication` retorna una promesa i `Store` requereix `await new Store(...).init()`. Les dades SQLite existents es conserven i no hi ha migració de contingut automàtica.
+
+`app/typeform-ingest.mjs` és el camí compartit d’importació. `/api/webhooks/typeform` verifica la signatura HMAC dels bytes originals abans de desar; la resta d’endpoints manté la comprovació CSRF. El registre del webhook és explícit des de Difusió, exigeix HTTPS públic i no publica secrets al client. El webhook no espera Groq. Text lliure arbitrari i admissió sintètica sense participant continuen pendents.
+
+Validació: 30 tests Node, incloent PostgreSQL embegut PGlite i clients de pool controlats; navegador a quatre amplades sense errors; auditoria de producció sense vulnerabilitats conegudes. La prova de connexió Supabase real i la recepció remota depenen de la creació del projecte, DATABASE_URL i allotjament HTTPS. La revisió humana de les etapes continua pendent.
+
+Connexió Supabase real verificada el 8/11/2026 després d’afegir `DATABASE_SSL_CA_FILE` amb la CA oficial inclosa al repositori (certificat públic, sense clau privada). S’han verificat deu taules amb RLS, una prova de persistència revertida i l’API del servidor real. El desplegament HTTPS i l’entrega real del webhook continuen pendents. Evidència a `test-results/supabase-proof.json`.
+
+## Integració amb Escoltamm · 8/11/2026
+
+S’ha recuperat la implementació PostgreSQL/Supabase desada per GitHub Desktop i s’ha integrat amb la interfície `1886970`. Es preserven el logotip, els estils, els textos i el selector del cicle. `Store.list()` retorna també `has_questions` i `has_followup`, que determinen el pas actiu del cicle. El botó de recepció automàtica Typeform s’incorpora a la nova vista de difusió.
+
+La funció compartida `seedCampaigns` i el comandament local `demo:seed` utilitzen el contracte asíncron, sense duplicar la lògica ni afegir exemples a l’arrencada o a Supabase. 31 proves Node, navegador amb el cicle complet a quatre amplades i connexió real Supabase verificats. La reserva original de GitHub Desktop es conserva com a còpia de recuperació. Les revisions humanes de les etapes continuen pendents.

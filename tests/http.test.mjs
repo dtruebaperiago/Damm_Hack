@@ -1,20 +1,20 @@
-import { Store as FixtureStore } from './fixtures.mjs';
+import { Store as FixtureStore } from "./fixtures.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createApplication } from "../app/server.mjs";
 test("HTTP authorization, CSRF, participant workflow and privacy boundary", async () => {
-  const { server, store } = createApplication({
+  const { server, store } = await createApplication({
     dbPath: ":memory:",
     secret: "test-secret-long-enough",
     adminPassword: "synthetic-password",
     mode: "demo",
     origin: "http://127.0.0.1:3999",
   });
-  assert.deepEqual(store.list(), []);
-  const originalCreate=store.createWave;
-  store.createWave=FixtureStore.prototype.createWave;
-  FixtureStore.prototype.seed.call(store);
-  store.createWave=originalCreate;
+  assert.deepEqual(await store.list(), []);
+  const originalCreate = store.createWave;
+  store.createWave = FixtureStore.prototype.createWave;
+  await FixtureStore.prototype.seed.call(store);
+  store.createWave = originalCreate;
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (path, body, cookie = "", origin = "http://127.0.0.1:3999") =>
@@ -47,11 +47,23 @@ test("HTTP authorization, CSRF, participant workflow and privacy boundary", asyn
       await fetch(base + "/api/campaigns", { headers: { Cookie: cookie } })
     ).json();
     assert.equal(list.campaigns.length, 3);
-    assert.equal((await fetch(base+'/api/campaigns/torns-oberta/typeform-qr',{headers:{Cookie:cookie}})).status,409);
-    store.db.prepare('UPDATE waves SET form_url=? WHERE id=?').run('https://form.typeform.com/to/synthetic','torns-oberta');
-    const remoteQR=await fetch(base+'/api/campaigns/torns-oberta/typeform-qr',{headers:{Cookie:cookie}});
-    assert.equal(remoteQR.status,200);
-    assert.match(await remoteQR.text(),/<svg/);
+    assert.equal(
+      (
+        await fetch(base + "/api/campaigns/torns-oberta/typeform-qr", {
+          headers: { Cookie: cookie },
+        })
+      ).status,
+      409,
+    );
+    await store.db
+      .prepare("UPDATE waves SET form_url=? WHERE id=?")
+      .run("https://form.typeform.com/to/synthetic", "torns-oberta");
+    const remoteQR = await fetch(
+      base + "/api/campaigns/torns-oberta/typeform-qr",
+      { headers: { Cookie: cookie } },
+    );
+    assert.equal(remoteQR.status, 200);
+    assert.match(await remoteQR.text(), /<svg/);
     const participant = await post("/api/participate/torns-oberta/auth", {
       credential: "DEMO-0001",
     });
@@ -112,6 +124,6 @@ test("HTTP authorization, CSRF, participant workflow and privacy boundary", asyn
     );
   } finally {
     await new Promise((r) => server.close(r));
-    store.db.close();
+    await store.db.close();
   }
 });
