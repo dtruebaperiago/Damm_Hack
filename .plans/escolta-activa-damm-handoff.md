@@ -6,6 +6,7 @@ Som quatre persones i treballarem en **dues parelles en paral·lel**. Una prepar
 
 | Document | Quan consultar-lo |
 | --- | --- |
+| [Pròxims passos](escolta-activa-damm-next-steps.md) | Tasques curtes per arrencar i comprovacions per connectar la demo. |
 | [Guia de participants](../guia_participants_repte_damm.md) | Requisits oficials, dades permeses, criteris de privacitat i avaluació. |
 | [Presentació del repte](../repte_estrella_damm_uab_the_hack_2026.md) | Context de negoci, biaixos i exemple de canvi de torns. |
 | [Esquema inicial de l’equip](../esquema_clima_laboral.svg) | Origen de la proposta de sondeig, personalització, canals i tancament del cicle. |

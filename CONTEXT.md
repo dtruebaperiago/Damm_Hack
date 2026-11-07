@@ -2,6 +2,10 @@
 
 [Handoff del hackathon](.plans/escolta-activa-damm-handoff.md) · Decisions de l’entrevista, tasques de les dues parelles i guió de la posada en comú.
 
+[Pròxims passos](.plans/escolta-activa-damm-next-steps.md) · Quick wins per parella i ordre d’integració de la demo.
+
+[Guió de presentació i demo](.plans/escolta-activa-damm-demo-guio.md) · Ordre, relat i assaig davant del jurat.
+
 | Etapa | Feina | Artefacte |
 | --- | --- | --- |
 | [01 · Definició](stages/01_definicio/CONTEXT.md) | Concretar el cas de demo i els requisits | [Especificació existent](.plans/escolta-activa-damm-spec.md) |

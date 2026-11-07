@@ -18,7 +18,10 @@ L’[estudi d’IA](../../IA%20en%20Enquestes%20de%20Clima.md) serveix per contr
 ## Sortida
 
 - [Especificació del prototip](../../.plans/escolta-activa-damm-spec.md) · abast, dades de calibració i guió de demo.
+- [Guió de presentació i demo](../../.plans/escolta-activa-damm-demo-guio.md) · relat oral i ordre del directe.
 
 ## Check
 
 L’equip recorre el guió de l’especificació i confirma que cobreix el flux mínim de la guia, des de la necessitat fins al seguiment. Comprova que el públic, la pregunta i les bases del contrast històric són explícits i que el guió el distingeix de l’evidència sobre el canvi de torns. La definició documentada alimenta l’esborrany de l’etapa 02.
+
+Per validar el relat oral, l’equip assaja el guió de presentació i comprova que es pot seguir el vincle entre la calibració, la interpretació de la mostra i l’acció de RRHH.
