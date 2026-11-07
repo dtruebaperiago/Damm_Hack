@@ -1,28 +1,28 @@
-/* Proposta de prototip; NO són especificacions oficials de marca.
-   Tokens amb àmbit limitat. El consumidor defineix els components. */
+/* Observacions i adaptacions: vegeu ../references/brandkit.md. No és un manual oficial. */
 [data-brand="estrella-damm"] {
-  --ed-red: #C8102E;
-  --ed-red-hover: #A30D26;
-  --ed-gold: #D5AD55;
-  --ed-paper: #FAF7F0;
-  --ed-surface: #FFFFFF;
-  --ed-ink: #24201D;
-  --ed-muted: #625B54;
-  --ed-border: #D9D1C5;
-  --ed-control-border: #81776A;
-  --ed-focus: #175E83;
+  --ed-brand-red: #e70404;
+  --ed-red: #b90000;
+  --ed-red-hover: #900000;
+  --ed-gold: #d5ad55;
+  --ed-paper: #f7f6f4;
+  --ed-surface: #fff;
+  --ed-ink: #151515;
+  --ed-muted: #555;
+  --ed-border: #d8d8d8;
+  --ed-control-border: #767676;
+  --ed-focus: #175e83;
   --ed-success: #256344;
   --ed-warning: #805500;
-  --ed-error: #A51D2D;
-  --ed-font-body: Arial, Helvetica, sans-serif;
-  --ed-font-heading: Arial, Helvetica, sans-serif;
-  --ed-font-editorial: Georgia, "Times New Roman", serif;
+  --ed-error: #a51d2d;
+  --ed-font-body: Roboto, Arial, sans-serif;
+  --ed-font-heading: "Neue Haas Unica Pro", "Arial Black", Arial, sans-serif;
+  --ed-font-editorial: "Garamond Pro", Georgia, serif;
   --ed-space-1: 4px;
   --ed-space-2: 8px;
   --ed-space-3: 16px;
   --ed-space-4: 24px;
   --ed-space-5: 32px;
   --ed-space-6: 48px;
-  --ed-radius-control: 8px;
-  --ed-radius-panel: 12px;
+  --ed-radius-control: 4px;
+  --ed-radius-panel: 4px;
 }

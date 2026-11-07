@@ -124,26 +124,21 @@ const navItems = [
   ["actions", "action", "Accions i seguiment"],
 ];
 function shell(content, active = "overview", crumb = "Visió general") {
-  app.innerHTML = `<div class="shell"><aside class="sidebar"><a class="brand" href="#overview"><div class="brand-name">escolta.</div><span class="brand-caption">Estrella Damm · People</span></a><div class="brand-divider"></div><div class="nav-label">ESPAI DE TREBALL</div><nav class="nav" aria-label="Navegació principal">${navItems.map(([id, i, label]) => `<a href="#${id}" class="${active === id ? "active" : ""}" ${active === id ? 'aria-current="page"' : ""}>${icon(i)}${label}${id === "campaigns" ? `<span class="nav-count">${campaigns.length}</span>` : ""}</a>`).join("")}</nav><div class="side-bottom"><div class="privacy-note">${icon("shield")}<strong>Escoltar des de la confiança</strong>Resultats agrupats. Cap resposta individual a l’espai de People.</div><nav class="nav" aria-label="Configuració"><a href="#settings" class="${active === "settings" ? "active" : ""}">${icon("settings")}Integracions</a></nav><div class="side-footer">UAB THE HACK! · PROTOTIP 2026</div></div></aside><div class="workspace"><header class="topbar"><div class="breadcrumb"><span>Espai de People</span>${icon("arrow")}<strong>${esc(crumb)}</strong></div><div class="top-tools"><span class="mode-label"><i class="mode-dot"></i>${session.mode === "demo" ? "DEMO · DADES SINTÈTIQUES" : "ENTORN CONNECTAT"}</span><a class="mobile-settings" href="#settings" aria-label="Integracions">${icon("settings")}</a><button class="avatar" data-act="logout" title="Tancar la sessió" aria-label="Tancar la sessió de People">EP</button></div></header><main id="main" class="content">${content}<footer class="bottom-note"><span>Escolta activa · De la necessitat a l’acció.</span><span>Prototip amb dades fictícies · Revisió de l’equip pendent</span></footer></main></div></div>`;
+  app.innerHTML = `<div class="shell"><aside class="sidebar"><a class="brand" href="#overview"><img class="brand-logo" src="/escoltamm-logo.png" alt="Escoltamm"><span class="brand-caption">Estrella Damm · People</span></a><div class="brand-divider"></div><nav class="nav" aria-label="Navegació principal">${navItems.map(([id, i, label]) => `<a href="#${id}" class="${active === id ? "active" : ""}" ${active === id ? 'aria-current="page"' : ""}>${icon(i)}${label}${id === "campaigns" && campaigns.length > 0 ? `<span class="nav-count">${campaigns.length}</span>` : ""}</a>`).join("")}</nav><div class="side-bottom"><nav class="nav" aria-label="Configuració"><a href="#settings" class="${active === "settings" ? "active" : ""}">${icon("settings")}Integracions</a></nav></div></aside><div class="workspace"><header class="topbar"><div class="breadcrumb"><span>Espai de People</span>${icon("arrow")}<strong>${esc(crumb)}</strong></div><div class="top-tools"><span class="mode-label">${session.mode === "demo" ? "Dades sintètiques" : "Entorn connectat"}</span><a class="mobile-settings" href="#settings" aria-label="Integracions">${icon("settings")}</a><button class="avatar" data-act="logout" title="Tancar la sessió" aria-label="Tancar la sessió de People">EP</button></div></header><main id="main" class="content">${content}</main></div></div>`;
   const main = $("#main");
   main.setAttribute("tabindex", "-1");
   main.focus({ preventScroll: true });
   window.scrollTo(0, 0);
   refreshLLMCooldown();
 }
-function head(
-  title,
-  subtitle,
-  action = true,
-  eyebrow = "EL TEU ESPAI D’ESCOLTA",
-) {
-  return `<header class="page-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${subtitle}</p></div>${action ? `<button class="btn btn-primary" data-act="new">${icon("plus")}Nova consulta</button>` : ""}</header>`;
+function head(title, action = false) {
+  return `<header class="page-head"><h1>${title}</h1>${action ? `<button class="btn btn-primary" data-act="new">${icon("plus")}Nova consulta</button>` : ""}</header>`;
 }
 function notice(text, type = "info") {
   return `<div class="notice ${type}">${icon(type === "success" ? "shield" : "info")}<p>${text}</p></div>`;
 }
-function empty(title, text, action = "") {
-  return `<div class="empty">${icon("wave")}<h3>${title}</h3><p>${text}</p>${action}</div>`;
+function empty(title, text = "", action = "") {
+  return `<div class="empty"><h3>${title}</h3>${text ? `<p>${text}</p>` : ""}${action}</div>`;
 }
 function table(list) {
   return `<div class="table-wrap"><table><thead><tr><th scope="col">Campanya</th><th scope="col">Estat</th><th scope="col">Respostes</th><th scope="col">Proper pas</th></tr></thead><tbody>${list.map((c) => `<tr><td><button class="row-link" data-open="${esc(c.id)}"><span class="campaign-title"><span class="campaign-icon">${icon(c.parent_id ? "action" : "campaign")}</span><span><strong>${esc(c.titol)}</strong><small>${esc(c.public.sector)} · ${esc(c.public.torn)}${c.parent_id ? " · Seguiment" : ""}</small></span></span></button></td><td>${badge(c.state)}</td><td>${num(c.total)}${c.total !== null ? "<small> · finals</small>" : ""}</td><td><a class="text-link" href="#campaign/${esc(c.id)}/${c.state === "closed" ? "results" : c.state === "published" ? "share" : "survey"}">${c.state === "closed" ? "Veure resultats" : c.state === "published" ? "Compartir QR" : c.state === "approved" ? "Publicar" : "Revisar consulta"} ${icon("arrow")}</a></td></tr>`).join("")}</tbody></table></div>`;
@@ -154,43 +149,55 @@ function stats() {
     count = closed.reduce((n, c) => n + (c.total || 0), 0),
     follow = campaigns.filter((c) => c.parent_id).length;
   return `<section class="stats" aria-label="Resum de l’espai">${[
-    [active, "Consultes obertes", "Recollida en curs", "campaign"],
-    [
-      count,
-      "Respostes publicables",
-      "Instantànies finals · dades sintètiques",
-      "people",
-    ],
-    [
-      closed.length,
-      "Onades tancades",
-      "Evidència per orientar decisions",
-      "chart",
-    ],
-    [follow, "Seguiments oberts", "Per tornar a escoltar", "action"],
+    [active, "Consultes obertes"],
+    [count, "Respostes publicables"],
+    [closed.length, "Onades tancades"],
+    [follow, "Seguiments"],
   ]
     .map(
-      ([value, title, note, i]) =>
-        `<div class="stat"><div class="stat-top">${title}${icon(i)}</div><div class="stat-value">${num(value)}</div><div class="stat-note">${note}</div></div>`,
+      ([value, title]) =>
+        `<div class="stat"><div class="stat-top">${title}</div><div class="stat-value">${num(value)}</div></div>`,
     )
     .join("")}</section>`;
 }
-async function overview() {
+let cycleCampaignId;
+function cycleSteps(campaign) {
+  const steps = ["Definir la necessitat", "Revisar i aprovar", "Recollir respostes", "Llegir els resultats", "Decidir i fer seguiment"];
+  const phaseByState = {
+    draft: campaign?.has_questions ? 2 : 1,
+    approved: 2,
+    publishing: 2,
+    uncertain: 2,
+    published: 3,
+    closed: campaign?.has_followup ? 5 : 4,
+  };
+  const phase = phaseByState[campaign?.state];
+  return steps.map((step, i) => `<li${phase === i + 1 ? ' aria-current="step"' : ""}><span class="step-circle" aria-hidden="true">${i + 1}</span>${step}</li>`).join("");
+}
+function overview() {
+  const campaign = campaigns.find((c) => c.id === cycleCampaignId) ?? campaigns[0];
   shell(
-    `${head("Escoltar millor. Actuar abans.", "Cada resposta és un punt de partida per millorar el dia a dia.")}${stats()}<div class="split"><div><section class="panel"><div class="panel-head"><div><h2>Les teves campanyes</h2><p>Un cicle continu d’escolta, comprensió i acció.</p></div><a class="text-link" href="#campaigns">Veure totes ${icon("arrow")}</a></div>${campaigns.length ? table(campaigns.slice(0, 4)) : empty("Comencem a escoltar?", "Crea una consulta per entendre una necessitat concreta.")}<div class="table-footer"><span>${campaigns.length} campanyes a l’espai</span><span>Validació humana abans de publicar</span></div></section></div><aside class="right-column"><section class="panel cycle-card"><div class="eyebrow">DE L’ESCOLTA A L’ACCIÓ</div><svg class="wave-art" viewBox="0 0 240 52" aria-hidden="true">${Array.from(
-      { length: 32 },
-      (_, i) => {
-        const h = 5 + Math.sin(i * 0.7) ** 2 * 33;
-        return `<line x1="${i * 7 + 6}" x2="${i * 7 + 6}" y1="${26 - h / 2}" y2="${26 + h / 2}"/>`;
-      },
-    ).join(
-      "",
-    )}</svg><h2>El canvi comença<br>per escoltar.</h2><p>Consultes breus. Decisions amb context. Accions que tenen continuïtat.</p><ol class="cycle-list">${["Definir una necessitat", "Preparar i validar", "Escoltar les persones", "Entendre i actuar", "Tornar a escoltar"].map((s, i) => `<li class="${i === 0 ? "current" : ""}"><span class="step-circle">${String(i + 1).padStart(2, "0")}</span>${s}</li>`).join("")}</ol><button class="text-link" data-act="new">Iniciar una consulta ${icon("arrow")}</button></section><div class="mini-note">${icon("shield")}<strong>Les persones, al centre.</strong>Només es publiquen resultats amb una base suficient. Les respostes individuals queden fora del dashboard.</div></aside></div>`,
+    `${head("Consultes de People", true)}
+    ${campaigns.length ? stats() : ""}
+    <div class="split">
+      <section class="panel overview-campaigns">
+        <div class="panel-head"><h2>Campanyes</h2>${campaigns.length ? `<a class="text-link" href="#campaigns">Veure totes ${icon("arrow")}</a>` : ""}</div>
+        ${campaigns.length ? table(campaigns.slice(0, 4)) : empty("Encara no hi ha consultes")}
+      </section>
+      <aside class="panel cycle-card">
+        <h2>Cicle d’escolta</h2>
+        ${campaigns.length > 1 ? `<label class="field cycle-picker">
+          <span class="visually-hidden">Campanya del cicle</span>
+          <select id="cycle-campaign">${campaigns.map((c) => `<option value="${esc(c.id)}" ${c.id === campaign.id ? "selected" : ""}>${esc(c.titol)}</option>`).join("")}</select>
+        </label>` : campaign ? `<p class="cycle-campaign-name">${esc(campaign.titol)}</p>` : ""}
+        <ol class="cycle-list" id="cycle-steps">${cycleSteps(campaign)}</ol>
+      </aside>
+    </div>`,
   );
 }
 function campaignList() {
   shell(
-    `${head("Cada consulta, una oportunitat.", "Prepara, comparteix i dona continuïtat a l’escolta.")}<section class="panel"><div class="panel-head"><h2>Totes les campanyes</h2><span class="pill-note">${campaigns.length} campanyes</span></div><div class="toolbar"><label class="search">${icon("search")}<span class="visually-hidden">Cercar campanyes</span><input type="search" id="campaign-search" placeholder="Cerca una campanya…"></label><label class="field"><span class="visually-hidden">Filtrar per estat</span><select id="state-filter"><option value="">Tots els estats</option>${Object.entries(
+    `${head("Campanyes", true)}<section class="panel"><div class="toolbar"><label class="search">${icon("search")}<span class="visually-hidden">Cercar campanyes</span><input type="search" id="campaign-search" placeholder="Cerca una campanya…"></label><label class="field"><span class="visually-hidden">Filtrar per estat</span><select id="state-filter"><option value="">Tots els estats</option>${Object.entries(
       states,
     )
       .map(([id, s]) => `<option value="${id}">${s}</option>`)
@@ -202,7 +209,7 @@ function campaignList() {
   );
 }
 async function calibration() {
-  shell(`${head("Calibració", "Context històric per interpretar les respostes.")}<section class="panel">${empty("Sense dades històriques", "No s’han carregat dades de calibració en aquest espai.")}</section>`, "calibration", "Calibració");
+  shell(`${head("Calibració")}<section class="panel">${empty("Sense dades històriques")}</section>`, "calibration", "Calibració");
 }
 const tabs = [
   ["need", "Necessitat"],
@@ -222,21 +229,21 @@ function detailFrame(inner) {
           ? '<button class="btn btn-primary" data-act="reconcile">Reconciliar publicació</button>'
           : "";
   shell(
-    `<a class="back" href="#campaigns">${icon("back")}Totes les campanyes</a><header class="page-head"><div><div class="eyebrow">${w.parent_id ? "TORNAR A ESCOLTAR" : "CICLE D’ESCOLTA"} · ${esc(w.config.public.sector)}</div><h1 class="detail-title">${esc(w.config.titol)}</h1><div class="detail-meta">${badge(w.state)}<span class="muted"><small>${esc(w.config.public.ubicacio)} · ${esc(w.config.public.torn)} · Versió ${w.version}</small></span></div></div>${primary}</header><nav class="tabs" aria-label="Passos de la campanya">${tabs.map(([id, s]) => `<a class="tab ${tab === id ? "active" : ""}" ${tab === id ? 'aria-current="page"' : ""} href="#campaign/${w.id}/${id}">${s}</a>`).join("")}</nav>${inner}`,
+    `<a class="back" href="#campaigns">${icon("back")}Totes les campanyes</a><header class="page-head"><div><h1 class="detail-title">${esc(w.config.titol)}</h1><div class="detail-meta">${badge(w.state)}<span class="muted"><small>${w.parent_id ? "Seguiment · " : ""}${esc(w.config.public.sector)} · ${esc(w.config.public.ubicacio)} · ${esc(w.config.public.torn)} · Versió ${w.version}</small></span></div></div>${primary}</header><nav class="tabs" aria-label="Passos de la campanya">${tabs.map(([id, s]) => `<a class="tab ${tab === id ? "active" : ""}" ${tab === id ? 'aria-current="page"' : ""} href="#campaign/${w.id}/${id}">${s}</a>`).join("")}</nav>${inner}`,
     "campaigns",
     w.config.titol,
   );
 }
 function needView() {
   const c = current.config;
-  return `<div class="detail-grid"><section class="panel section"><div class="eyebrow">LA NECESSITAT</div><h2>${esc(c.objectiu)}</h2><dl class="info-list"><div><dt>Decisió que volem orientar</dt><dd>${esc(c.decisio)}</dd></div><div><dt>Context</dt><dd>${esc(c.context)}</dd></div><div><dt>Públic escollit per People</dt><dd>${esc(c.public.sector)} · ${esc(c.public.ubicacio)} · ${esc(c.public.torn)}<br><small>${c.population} credencials sintètiques elegibles</small></dd></div><div><dt>Finestra de resposta</dt><dd>${c.dies} dies · ${new Date(c.opens).toLocaleDateString("ca-ES")} – ${new Date(c.closes).toLocaleDateString("ca-ES")}</dd></div><div><dt>Temes exclosos</dt><dd>${esc(c.exclusions)}</dd></div></dl>${["draft", "approved"].includes(current.state) ? '<button class="btn" data-act="edit-need">Editar la necessitat</button>' : ""}</section><aside class="panel section"><div class="eyebrow">DIAGNÒSTIC DEL PÚBLIC</div><h2>Context per preguntar millor</h2>${current.diagnostic.length ? current.diagnostic.map((d) => `<div class="diagnostic"><small class="${d.estat === "senyal_mesurat" ? "red" : ""}">${{ senyal_mesurat: "Senyal mesurat", risc: "Risc", sense_dades_suficients: "Dades insuficients" }[d.estat]}</small><h3>${esc(d.titol)}</h3><p>${esc(d.text)}</p></div>`).join("") : '<p>Encara no hi ha dades per generar insights.</p>'}</aside></div>`;
+  return `<div class="detail-grid"><section class="panel section"><h2>${esc(c.objectiu)}</h2><dl class="info-list"><div><dt>Decisió</dt><dd>${esc(c.decisio)}</dd></div><div><dt>Context</dt><dd>${esc(c.context)}</dd></div><div><dt>Públic</dt><dd>${esc(c.public.sector)} · ${esc(c.public.ubicacio)} · ${esc(c.public.torn)}<br><small>${c.population} credencials sintètiques elegibles</small></dd></div><div><dt>Finestra de resposta</dt><dd>${c.dies} dies · ${new Date(c.opens).toLocaleDateString("ca-ES")} – ${new Date(c.closes).toLocaleDateString("ca-ES")}</dd></div><div><dt>Temes exclosos</dt><dd>${esc(c.exclusions)}</dd></div></dl>${["draft", "approved"].includes(current.state) ? '<button class="btn" data-act="edit-need">Editar la necessitat</button>' : ""}</section><aside class="panel section"><h2>Diagnòstic del públic</h2>${current.diagnostic.length ? current.diagnostic.map((d) => `<div class="diagnostic"><small class="${d.estat === "senyal_mesurat" ? "red" : ""}">${{ senyal_mesurat: "Senyal mesurat", risc: "Risc", sense_dades_suficients: "Dades insuficients" }[d.estat]}</small><h3>${esc(d.titol)}</h3><p>${esc(d.text)}</p></div>`).join("") : '<p>Sense dades per al diagnòstic.</p>'}</aside></div>`;
 }
 function questionEditor(q, i, editable) {
   return `<article class="question"><header class="question-heading"><div class="question-number"><b>${String(i + 1).padStart(2, "0")}</b><span>${q.tipus === "escala_1_5" ? "Escala 1–5" : q.tipus === "seleccio_unica" ? "Selecció única" : "Aclariment opcional"}</span>${q.de_referencia ? `<span class="fixed-tag">${icon("lock")}Referència fixa</span>` : ""}</div>${editable && !q.de_referencia ? `<div class="question-tools"><button class="icon-btn" data-move="${i}" data-dir="-1" aria-label="Moure la pregunta ${i + 1} amunt">${icon("up")}</button><button class="icon-btn" data-move="${i}" data-dir="1" aria-label="Moure la pregunta ${i + 1} avall">${icon("down")}</button><button class="icon-btn" data-delete="${i}" aria-label="Eliminar la pregunta ${i + 1}">${icon("trash")}</button></div>` : ""}</header><div class="field"><label for="question-${i}">Enunciat</label><textarea id="question-${i}" data-q="${i}" data-prop="text" ${!editable || q.de_referencia ? "readonly" : ""}>${esc(q.text)}</textarea></div><small>${esc(q.que_mesura)}</small>${q.opcions.length ? `<div class="option-editor">${q.opcions.map((o, j) => `<label><span>${q.tipus === "escala_1_5" && j < 5 ? j + 1 : "○"}</span><span class="visually-hidden">Opció ${j + 1} de la pregunta ${i + 1}</span><input data-option="${i}:${j}" aria-label="Opció ${j + 1} de la pregunta ${i + 1}" value="${esc(o.etiqueta)}" ${!editable || q.de_referencia ? "readonly" : ""}></label>`).join("")}</div>` : ""}${editable && !q.de_referencia && q.tipus !== "text_lliure" ? `<label class="check-label"><input type="checkbox" data-required="${i}" ${q.obligatoria ? "checked" : ""}>Resposta obligatòria</label>` : ""}<footer>${q.condicio_de_visualitzacio ? 'Branca: '+q.condicio_de_visualitzacio.totes.map(c=>`Q${draft.preguntes.findIndex(p=>p.id===c.pregunta_id)+1}: ${c.opcions_ids.map(id=>esc(draft.preguntes.find(p=>p.id===c.pregunta_id)?.opcions.find(o=>o.id===id)?.etiqueta||id)).join(' / ')}`).join(' I ') : "Pregunta comuna · " + (q.obligatoria ? "Obligatòria" : "Es pot ometre")}</footer></article>`;
 }
 function surveyView() {
   const editable = ["draft", "approved"].includes(current.state);
-  return `${notice("Les preguntes es generen a partir de la necessitat descrita. Revisa-les abans d’aprovar. La durada és estimada.")}<div class="toolbar"><span class="pill-note">${draft.temps_estimat_segons} s estimats · ${draft.preguntes.length} preguntes possibles</span>${editable ? `<button class="btn btn-small" data-act="json">Editar JSON complet</button><button class="btn btn-small" data-act="generate" ${session.integrations.llm ? "" : "disabled"}>${icon("wave")}Generar amb IA real</button><button class="btn btn-small btn-primary" data-act="save">Desar canvis</button>` : ""}</div>${!session.integrations.llm && editable ? '<p class="muted"><small>La consulta comença buida. Configura el proveïdor a Integracions per generar les preguntes.</small></p>' : ""}<div class="detail-grid"><section class="panel"><div class="section"><div class="field"><label for="survey-title">Títol del formulari</label><input id="survey-title" value="${esc(draft.titol)}" ${editable ? "" : "readonly"}></div><div class="field"><label for="survey-intro">Introducció i tractament de dades</label><textarea id="survey-intro" ${editable ? "" : "readonly"}>${esc(draft.introduccio)}</textarea></div></div>${draft.preguntes.length ? draft.preguntes.map((q, i) => questionEditor(q, i, editable)).join("") : empty("Encara no hi ha preguntes", "Genera un esborrany amb IA a partir de la necessitat descrita, o escriu-lo amb l’editor JSON.")}</section><aside class="preview"><div class="eyebrow">PREVISUALITZACIÓ DEL RECORREGUT</div><h2>Com ho viurà qui respon?</h2><p>Tria respostes per comprovar quan apareix l’aclariment.</p>${draft.preguntes.map((q,i)=>!q.condicio_de_visualitzacio&&q.opcions.length?`<div class="field"><label for="preview-q${i+1}">Q${i+1} · ${esc(q.que_mesura)}</label><select id="preview-q${i+1}" data-preview="${q.id}"><option value="">Sense resposta</option>${q.opcions.map(o=>`<option value="${esc(o.id)}">${esc(o.etiqueta)}</option>`).join('')}</select></div>`:'').join('')}<div id="preview-path"></div><hr><p>La repregunta només apareix quan es compleixen totes les condicions indicades.</p>${current.published ? `<a class="text-link" href="/participa/${current.id}" target="_blank" rel="noopener">Obrir l’accés del participant ${icon("arrow")}</a>` : ""}</aside></div>`;
+  return `<div class="toolbar">${draft.preguntes.length ? `<span class="pill-note">${draft.preguntes.length} preguntes · ${draft.temps_estimat_segons} s estimats</span>` : ""}${editable ? `<button class="btn btn-small ${session.integrations.llm && !draft.preguntes.length ? "btn-primary" : ""}" data-act="generate" ${session.integrations.llm ? "" : "disabled"}>Generar amb IA real</button><button class="btn btn-small" data-act="save">Desar canvis</button><button class="btn btn-small btn-quiet" data-act="json">Editar JSON complet</button>` : ""}</div>${!session.integrations.llm && editable ? '<p class="muted"><small>Configura la IA a <a class="text-link" href="#settings">Integracions</a>.</small></p>' : ""}<div class="${draft.preguntes.length ? "detail-grid" : ""}"><section class="panel"><div class="section"><div class="field"><label for="survey-title">Títol del formulari</label><input id="survey-title" value="${esc(draft.titol)}" ${editable ? "" : "readonly"}></div><div class="field"><label for="survey-intro">Introducció i tractament de dades</label><textarea id="survey-intro" ${editable ? "" : "readonly"}>${esc(draft.introduccio)}</textarea></div></div>${draft.preguntes.length ? draft.preguntes.map((q, i) => questionEditor(q, i, editable)).join("") : empty("Encara no hi ha preguntes")}</section>${draft.preguntes.length ? `<aside class="preview"><h2>Vista del participant</h2>${draft.preguntes.some((q) => q.condicio_de_visualitzacio) ? "<p>Tria respostes per provar les preguntes condicionals.</p>" : ""}${draft.preguntes.map((q,i)=>!q.condicio_de_visualitzacio&&q.opcions.length?`<div class="field"><label for="preview-q${i+1}">Q${i+1} · ${esc(q.que_mesura)}</label><select id="preview-q${i+1}" data-preview="${q.id}"><option value="">Sense resposta</option>${q.opcions.map(o=>`<option value="${esc(o.id)}">${esc(o.etiqueta)}</option>`).join('')}</select></div>`:'').join('')}<div id="preview-path"></div>${current.published ? `<a class="text-link" href="/participa/${current.id}" target="_blank" rel="noopener">Obrir l’accés del participant ${icon("arrow")}</a>` : ""}</aside>` : ""}</div>`;
 }
 function previewPath() {
   if (!$("#preview-path")) return;
@@ -253,17 +260,17 @@ function previewPath() {
 }
 function shareView() {
   if (!current.published)
-    return `<section class="panel">${empty("Primer, revisar i aprovar.", "El QR només estarà disponible quan s’hagi publicat la versió aprovada.", `<a class="btn" href="#campaign/${current.id}/survey">Revisar la consulta ${icon("arrow")}</a>`)}</section>`;
+    return `<section class="panel">${empty("Consulta pendent de publicació", "El QR estarà disponible en publicar-la.", `<a class="btn" href="#campaign/${current.id}/survey">Revisar la consulta ${icon("arrow")}</a>`)}</section>`;
   const link = `${location.origin}/participa/${current.id}`;
-  return `${current.state === "closed" ? notice("La recollida està tancada. El QR conserva l’enllaç, però ja no permet enviar respostes.") : notice(current.source === "local" ? "Mode local: el QR obre el formulari de contingència. Les respostes no s’envien a Typeform." : "El QR obre l’accés de la plataforma. Només les respostes autoritzades s’accepten als agregats.")}<section class="panel section"><div class="qr-layout"><div class="qr-box"><img src="/api/campaigns/${current.id}/qr" alt="QR de l’accés a aquesta consulta"><strong>${esc(current.config.titol)}</strong><small>${esc(current.config.public.torn)} · Dades de prova</small></div><div><div class="eyebrow">COMPARTIR PER ESCOLTAR</div><h2>Un QR. ${current.config.public.torn==='Tots dos'?'Tots dos torns.':'El teu col·lectiu.'}</h2><p>Comparteix-lo on la plantilla el pugui veure, amb espai i temps per respondre sense pressió.</p><a class="share-url" href="${link}" target="_blank" rel="noopener">${esc(link)}</a>${current.form_url ? `<p><a class="text-link" href="${esc(current.form_url)}" target="_blank" rel="noopener">Obrir formulari a Typeform</a> · <a class="text-link" href="/api/campaigns/${current.id}/typeform-qr" download="qr-typeform.svg">Descarregar QR Typeform</a></p>` : ""}<div class="share-actions"><button class="btn" data-act="copy">${icon("copy")}Copiar enllaç</button><a class="btn" href="/api/campaigns/${current.id}/qr" download="qr-consulta.svg">${icon("download")}Descarregar QR</a><button class="btn btn-quiet" data-act="print">Imprimir</button></div><p><small>La demo accepta credencials fictícies DEMO-0001 a DEMO-0600 (Planta). L’ID no es mostra a People ni s’envia al proveïdor.</small></p></div></div></section>${current.state === "published" ? `<div class="form-actions">${current.source === "typeform" ? '<button class="btn" data-act="import">Importar respostes de Typeform</button>' : ""}<button class="btn" data-act="close">Tancar recollida i calcular resultats ${icon("arrow")}</button></div>` : ""}<p class="muted"><small>Un QR amb 127.0.0.1 només funciona en aquest ordinador. Per provar-lo amb un mòbil, configura PUBLIC_ORIGIN amb un origen accessible i segur.</small></p>`;
+  return `${current.state === "closed" ? notice("La recollida està tancada. El QR conserva l’enllaç, però ja no permet enviar respostes.") : notice(current.source === "local" ? "El QR obre el formulari local." : "Per comptar als resultats, respon des del QR de la plataforma.")}<section class="panel section"><div class="qr-layout"><div class="qr-box"><img src="/api/campaigns/${current.id}/qr" alt="QR de l’accés a aquesta consulta"><strong>${esc(current.config.titol)}</strong><small>${esc(current.config.public.torn)} · Dades de prova</small></div><div><h2>Comparteix la consulta</h2><a class="text-link" href="${link}" target="_blank" rel="noopener">Obrir l’accés del participant ${icon("arrow")}</a>${current.form_url ? `<p><a class="text-link" href="${esc(current.form_url)}" target="_blank" rel="noopener">Obrir formulari a Typeform</a> · <a class="text-link" href="/api/campaigns/${current.id}/typeform-qr" download="qr-typeform.svg">Descarregar QR Typeform</a></p>` : ""}<div class="share-actions"><button class="btn" data-act="copy">${icon("copy")}Copiar enllaç</button><a class="btn" href="/api/campaigns/${current.id}/qr" download="qr-consulta.svg">${icon("download")}Descarregar QR</a><button class="btn btn-quiet" data-act="print">Imprimir</button></div></div></div></section>${current.state === "published" ? `<div class="form-actions">${current.source === "typeform" ? '<button class="btn" data-act="import">Importar respostes de Typeform</button>' : ""}<button class="btn" data-act="close">Tancar recollida i calcular resultats ${icon("arrow")}</button></div>` : ""}${["127.0.0.1", "localhost", "[::1]"].includes(location.hostname) ? `<p class="muted"><small>El QR de la plataforma només funciona en aquest ordinador.</small></p>` : ""}`;
 }
 function resultView() {
   const r = current.results;
   if (r.recollint)
-    return `<section class="panel">${empty("L’escolta està en marxa.", "Els resultats s’obriran quan es tanqui la recollida. Així evitem revelar respostes petites per diferència entre actualitzacions.", `<a class="btn" href="#campaign/${current.id}/share">Anar a difusió ${icon("arrow")}</a>`)}</section>`;
+    return `<section class="panel">${empty("Recollida en curs", "Els resultats es mostren quan es tanca la recollida.", `<a class="btn" href="#campaign/${current.id}/share">Anar a difusió ${icon("arrow")}</a>`)}</section>`;
   if (current.state !== "closed")
-    return `<section class="panel">${empty("Encara no hi ha resultats.", "Prepara, aprova i publica la consulta per començar a escoltar.")}</section>`;
-  return `${notice("Instantània final i immutable. Resultats descriptius de la mostra; no són una avaluació individual. Les bases inferiors a 10 i els complements petits es protegeixen.")}<section class="stats">${[
+    return `<section class="panel">${empty("Encara no hi ha resultats", "Publica la consulta per recollir respostes.")}</section>`;
+  return `${notice("Resultats agregats de la mostra. Les bases de menys de 10 i els complements petits es protegeixen.")}<section class="stats">${[
     [num(r.total), "Respostes acceptades"],
     [num(r.taxa, "%"), "Participació sobre elegibles"],
     [r.population, "Població sintètica elegible"],
@@ -271,11 +278,11 @@ function resultView() {
   ]
     .map(
       ([n, t]) =>
-        `<div class="stat"><div class="stat-top">${t}</div><div class="stat-value">${n}</div><div class="stat-note">${r.total === null ? "Base insuficient · dada protegida" : "Onada actual · instantània final"}</div></div>`,
+        `<div class="stat"><div class="stat-top">${t}</div><div class="stat-value">${n}</div></div>`,
     )
     .join(
       "",
-    )}</section>${r.total === null ? notice("Dades insuficients per mostrar resultats d’aquesta onada. No es retornaran les respostes individuals ni els recomptes petits.") : `<div class="detail-grid"><div><section class="panel"><div class="panel-head"><div><h2>Resultats de la consulta</h2><p>Favorables: 4–5 sobre respostes numèriques vàlides 1–5.</p></div></div>${r.metrics.map((m) => `<article class="metric-card"><div><h3>${esc(m.text)}</h3><small>Base vàlida: ${num(m.n)} · «No ho puc valorar» queda fora de l’escala.</small>${m.distribution ? `<div class="distribution">${m.distribution.map((n, i) => `<div>${num(n)}<progress value="${n}" max="${m.n}" aria-label="Puntuació ${i + 1}: ${n} respostes"></progress>${i + 1}</div>`).join("")}</div>` : "<p><small>Distribució protegida per categories o complements petits.</small></p>"}${m.absencies ? `<small>${m.absencies.map((a) => `${{ no_valorable: "No valorable", omesa: "Omeses", invalida: "Invàlides" }[a.estat]}: ${a.n}`).join(" · ")}</small>` : ""}</div><div class="large-number">${num(m.favorable, "<small>%</small>")}<div><small>favorables</small></div></div></article>`).join("")}</section><section class="panel"><div class="panel-head"><div><h2>Temes que es repeteixen</h2><p>Una menció per tema i resposta · base de textos analitzables: ${num(r.textos)}</p></div></div><div class="panel-body">${r.branca ? `<p><small>Elegibles per a l’aclariment: ${num(r.branca.elegibles)} · Textos: ${num(r.branca.respostes_text)}<br>${esc(r.branca.visibilitat)}</small></p>` : ""}${r.temes.length ? r.temes.map((t) => `<div class="topic-row"><strong>${esc(t.titol)}</strong><span class="topic-n">${num(t.n)} mencions</span></div>`).join("") : empty("Sense temes publicables", "No hi ha prou suport segur per publicar temes. El text descartat no compta com a absència d’un tema.")}</div></section>${(r.seleccions || []).map(q => `<section class="panel section"><h2>${esc(q.text)}</h2><p>Base de respostes vàlides: ${q.base}.</p>${q.opcions.map(o => `<div class="topic-row"><span>${esc(o.etiqueta)}</span><span>${o.n}</span></div>`).join("")}</section>`).join("")}${r.comparacio ? `<section class="panel section"><h2>Evolució de parelles</h2><p>${esc(r.comparacio.limit || "Comparació indisponible: ha canviat el contracte de mesura.")}</p>${r.comparacio.metrics.map((m) => `<div class="topic-row"><span>${esc(m.id)}<br><small>Base aparellada: ${num(m.n)} · Pèrdues de seguiment: ${num(m.perdues)}</small></span><strong>${m.delta === null ? "Dades insuficients" : num(m.delta) + " punts d’escala"}</strong></div>`).join("")}</section>` : ""}</div><aside><section class="panel section"><div class="eyebrow">COMPOSICIÓ DE LA MOSTRA</div><h2>Arribem a tothom?</h2>${r.torns.map((s) => `<div class="topic-row"><span>Torn de ${s.torn.toLowerCase()}<br><small>${num(s.pes_mostra, "%")} de la mostra · ${num(s.pes_poblacio, "%")} del públic</small></span><span>${num(s.n)}<br><small>${s.diferencia === null ? "Protegit" : num(s.diferencia) + " pp"}</small></span></div>`).join("")}<p><small>Si un torn és petit, s’oculta també el complement. La participació no garanteix representativitat.</small></p></section><section class="panel section"><div class="eyebrow">PROCEDÈNCIA</div>${(r.origens || []).map((o) => `<p><strong>${o.source === "fixture" ? "Llavor sintètica" : o.source === "local" ? "Formulari local" : "Import de Typeform"}</strong><br>${num(o.n)} respostes publicables</p>`).join("")}<small>Cap dada històrica s’ha vinculat a les persones d’aquesta onada.</small></section></aside></div>`}<div class="form-actions"><a class="btn" href="/api/campaigns/${current.id}/export">${icon("download")}Exportar agregats</a><a class="btn btn-primary" href="#campaign/${current.id}/action">Decidir el proper pas ${icon("arrow")}</a></div>`;
+    )}</section>${r.total === null ? notice("Dades insuficients per mostrar resultats d’aquesta onada.") : `<div class="detail-grid"><div><section class="panel"><div class="panel-head"><div><h2>Resultats de la consulta</h2><p>Favorables: 4–5 sobre respostes numèriques vàlides 1–5.</p></div></div>${r.metrics.map((m) => `<article class="metric-card"><div><h3>${esc(m.text)}</h3><small>Base vàlida: ${num(m.n)} · «No ho puc valorar» queda fora de l’escala.</small>${m.distribution ? `<div class="distribution">${m.distribution.map((n, i) => `<div>${num(n)}<progress value="${n}" max="${m.n}" aria-label="Puntuació ${i + 1}: ${n} respostes"></progress>${i + 1}</div>`).join("")}</div>` : "<p><small>Distribució protegida per categories o complements petits.</small></p>"}${m.absencies ? `<small>${m.absencies.map((a) => `${{ no_valorable: "No valorable", omesa: "Omeses", invalida: "Invàlides" }[a.estat]}: ${a.n}`).join(" · ")}</small>` : ""}</div><div class="large-number">${num(m.favorable, "<small>%</small>")}<div><small>favorables</small></div></div></article>`).join("")}</section><section class="panel"><div class="panel-head"><div><h2>Temes que es repeteixen</h2><p>Una menció per tema i resposta · base de textos analitzables: ${num(r.textos)}</p></div></div><div class="panel-body">${r.branca ? `<p><small>Elegibles per a l’aclariment: ${num(r.branca.elegibles)} · Textos: ${num(r.branca.respostes_text)}<br>${esc(r.branca.visibilitat)}</small></p>` : ""}${r.temes.length ? r.temes.map((t) => `<div class="topic-row"><strong>${esc(t.titol)}</strong><span class="topic-n">${num(t.n)} mencions</span></div>`).join("") : empty("Sense temes publicables", "No hi ha prou suport segur per publicar temes. El text descartat no compta com a absència d’un tema.")}</div></section>${(r.seleccions || []).map(q => `<section class="panel section"><h2>${esc(q.text)}</h2><p>Base de respostes vàlides: ${q.base}.</p>${q.opcions.map(o => `<div class="topic-row"><span>${esc(o.etiqueta)}</span><span>${o.n}</span></div>`).join("")}</section>`).join("")}${r.comparacio ? `<section class="panel section"><h2>Evolució de parelles</h2><p>${esc(r.comparacio.limit || "Comparació indisponible: ha canviat el contracte de mesura.")}</p>${r.comparacio.metrics.map((m) => `<div class="topic-row"><span>${esc(m.id)}<br><small>Base aparellada: ${num(m.n)} · Pèrdues de seguiment: ${num(m.perdues)}</small></span><strong>${m.delta === null ? "Dades insuficients" : num(m.delta) + " punts d’escala"}</strong></div>`).join("")}</section>` : ""}</div><aside><section class="panel section"><h2>Mostra per torn</h2>${r.torns.map((s) => `<div class="topic-row"><span>Torn de ${s.torn.toLowerCase()}<br><small>${num(s.pes_mostra, "%")} de la mostra · ${num(s.pes_poblacio, "%")} del públic</small></span><span>${num(s.n)}<br><small>${s.diferencia === null ? "Protegit" : num(s.diferencia) + " pp"}</small></span></div>`).join("")}<p><small>Si un torn és petit, s’oculta també el complement. La participació no garanteix representativitat.</small></p></section><section class="panel section"><h2>Origen de les respostes</h2>${(r.origens || []).map((o) => `<p><strong>${o.source === "fixture" ? "Llavor sintètica" : o.source === "local" ? "Formulari local" : "Import de Typeform"}</strong><br>${num(o.n)} respostes publicables</p>`).join("")}<small>Cap dada històrica s’ha vinculat a les persones d’aquesta onada.</small></section></aside></div>`}<div class="form-actions"><a class="btn" href="/api/campaigns/${current.id}/export">${icon("download")}Exportar agregats</a><a class="btn btn-primary" href="#campaign/${current.id}/action">Decidir el proper pas ${icon("arrow")}</a></div>`;
 }
 function actionView(w = current) {
   const actions = {
@@ -297,7 +304,7 @@ function actionView(w = current) {
   };
   if (w.followup)
     return `<section class="panel section">${notice("People ha seleccionat una acció. El seguiment està vinculat a l’evidència original.", "success")}<h2>${esc(w.selected_action?.titol || "Seguiment preparat")}</h2><p>${esc(w.selected_action?.descripcio || "")}</p><a class="btn btn-primary" href="#campaign/${w.followup}/survey">Obrir la consulta de seguiment ${icon("arrow")}</a></section>`;
-  return `${notice("Les recomanacions són propostes. People selecciona l’acció i el seguiment conserva el públic i les dues preguntes fixes.")}<section class="panel"><div class="panel-head"><div><h2>De les troballes a un proper pas</h2><p>${session.mode === "demo" ? "Propostes de regles locals · No són una crida IA executada" : "Propostes IA vinculades a evidència agregada"}</p></div>${session.mode !== "demo" ? '<button class="btn" data-act="proposals">Generar propostes amb IA</button>' : ""}</div>${w.proposals.length ? w.proposals.map((p) => `<article class="action-card"><div class="eyebrow">PROPOSTA · ${esc(p.origen)}</div><h3>${esc(actions[p.accio_id]?.[0] || p.accio_id)}</h3><p>${esc(actions[p.accio_id]?.[1] || "")}</p><div class="action-evidence">${icon("chart")} ${esc(p.motiu)}<br><small>Evidència: ${p.evidencia_ids.map(esc).join(", ")} · Onada actual</small></div><p><small>Rol suggerit: ${esc(actions[p.accio_id]?.[2] || "People")}</small></p><button class="btn" data-follow="${esc(p.accio_id)}" data-wave="${w.id}">Escollir acció i crear seguiment ${icon("arrow")}</button></article>`).join("") : empty("Primer, evidència suficient.", "Cal tancar la recollida i disposar de troballes publicables per orientar una acció.")}</section>`;
+  return `<section class="panel"><div class="panel-head"><div><h2>Propostes d’acció</h2><p>${session.mode === "demo" ? "Propostes de regles locals" : "Propostes IA vinculades a evidència agregada"}</p></div>${session.mode !== "demo" ? '<button class="btn" data-act="proposals">Generar propostes amb IA</button>' : ""}</div>${w.proposals.length ? w.proposals.map((p) => `<article class="action-card"><small>${esc(p.origen)}</small><h3>${esc(actions[p.accio_id]?.[0] || p.accio_id)}</h3><p>${esc(actions[p.accio_id]?.[1] || "")}</p><div class="action-evidence">${icon("chart")} ${esc(p.motiu)}<br><small>Evidència: ${p.evidencia_ids.map(esc).join(", ")} · Onada actual</small></div><p><small>Rol suggerit: ${esc(actions[p.accio_id]?.[2] || "People")}</small></p><button class="btn" data-follow="${esc(p.accio_id)}" data-wave="${w.id}">Escollir acció i crear seguiment ${icon("arrow")}</button></article>`).join("") : empty("Encara no hi ha propostes", "Calen resultats publicables.")}</section>`;
 }
 async function allActions() {
   const completed = await Promise.all(
@@ -306,14 +313,14 @@ async function allActions() {
       .map((c) => api("/api/campaigns/" + c.id)),
   );
   shell(
-    `${head("Donar continuïtat a l’escolta.", "Escull una acció, conserva l’evidència i torna a preguntar.", false, "ACCIÓ I SEGUIMENT")}${completed.length ? completed.map((w) => `<section><h2>${esc(w.config.titol)}</h2>${actionView(w)}</section>`).join("") : empty("Encara no hi ha accions.", "Les propostes apareixeran a partir de resultats publicables.")}`,
+    `${head("Accions i seguiment")}${completed.length ? completed.map((w) => `<section><h2>${esc(w.config.titol)}</h2>${actionView(w)}</section>`).join("") : empty("Encara no hi ha accions", "Les propostes apareixen quan hi ha resultats publicables.")}`,
     "actions",
     "Accions i seguiment",
   );
 }
 function settings() {
   shell(
-    `${head("Les eines darrere de l’escolta.", "Configura les connexions al servidor, sense exposar credencials al navegador.", false, "INTEGRACIONS")}${notice(session.mode === "demo" ? "Estàs en mode de demo local. Formularis i dades de contingència no es presenten com a respostes de Typeform ni com a crides IA." : "Entorn connectat. Verifica les funcions i els límits del teu compte Typeform abans de la demo.")}<section class="panel">${[
+    `${head("Integracions")}${notice(session.mode === "demo" ? "Estàs en mode de demo local. Formularis i dades de contingència no es presenten com a respostes de Typeform ni com a crides IA." : "Entorn connectat. Verifica les funcions i els límits del teu compte Typeform abans de la demo.")}<section class="panel">${[
       [
         "T",
         "Typeform",
@@ -346,6 +353,7 @@ async function route() {
     if (hash.startsWith("campaign/")) {
       const [, id, t] = hash.split("/");
       current = await api("/api/campaigns/" + encodeURIComponent(id));
+      cycleCampaignId = current.id;
       draft = structuredClone(current.survey);
       tab = tabs.some(([x]) => x === t) ? t : "need";
       detailFrame(
@@ -362,7 +370,7 @@ async function route() {
     else if (hash === "calibration") await calibration();
     else if (hash === "actions") await allActions();
     else if (hash === "settings") settings();
-    else await overview();
+    else overview();
   } catch (e) {
     shell(
       `${notice(esc(e.message), "error")}<a class="btn" href="#overview">Tornar a l’inici</a>`,
@@ -370,7 +378,7 @@ async function route() {
   }
 }
 function renderLogin() {
-  app.innerHTML = `<main id="main" class="login-page"><section class="login-story"><div class="brand-name">escolta.</div><div><h1>Les bones decisions<br>comencen escoltant.</h1><p>Un espai per entendre les persones i transformar el que ens expliquen en accions.</p></div><footer>Estrella Damm · People · UAB The Hack! 2026</footer></section><section class="login-form"><div class="login-inner"><div class="login-name">ESPAI DE PEOPLE</div><h2>Benvingut al teu espai.</h2><p>Accedeix per preparar consultes i donar continuïtat a l’escolta.</p><form id="login-form"><div class="field"><label for="password">Contrasenya de l’equip</label><input id="password" name="password" type="password" autocomplete="current-password" required></div><button class="btn btn-primary" type="submit">Entrar a l’espai ${icon("arrow")}</button><p id="login-error" class="error-text" role="alert"></p></form>${session?.mode === "demo" ? notice("Demo amb dades sintètiques. Contrasenya de prova: <strong>equip-damm</strong>.") : ""}<p class="participant-footer">No introdueixis dades personals reals.</p></div></section></main>`;
+  app.innerHTML = `<main id="main" class="login-page"><section class="login-story"><img class="brand-logo" src="/escoltamm-logo.png" alt="Escoltamm"><footer>Estrella Damm · People · UAB The Hack! 2026</footer></section><section class="login-form"><div class="login-inner"><h1>Accés de People</h1><form id="login-form"><div class="field"><label for="password">Contrasenya de l’equip</label><input id="password" name="password" type="password" autocomplete="current-password" required></div><button class="btn btn-primary" type="submit">Entrar a l’espai ${icon("arrow")}</button><p id="login-error" class="error-text" role="alert"></p></form>${session?.mode === "demo" ? notice("Contrasenya de prova: <strong>equip-damm</strong>.") : ""}<p class="participant-footer">No introdueixis dades personals reals.</p></div></section></main>`;
 }
 function showDialog(title, body) {
   dialog.innerHTML = `<div class="dialog-head"><h2>${title}</h2><button type="button" data-act="dismiss" aria-label="Tancar">${icon("close")}</button></div><div class="dialog-body">${body}</div>`;
@@ -379,7 +387,7 @@ function showDialog(title, body) {
 function needForm(edit = false) {
   const c = edit ? current.config : null;
   showDialog(
-    edit ? "Editar la necessitat" : "Què necessitem entendre?",
+    edit ? "Editar la necessitat" : "Nova consulta",
     `<form id="need-form" data-edit="${edit}"><div class="form-grid">${[
       ["titol", "Nom de la campanya", c?.titol || ""],
       [
@@ -587,6 +595,10 @@ function filterCampaigns() {
 }
 document.addEventListener("change", (event) => {
   const el = event.target;
+  if (el.id === "cycle-campaign") {
+    cycleCampaignId = el.value;
+    $("#cycle-steps").innerHTML = cycleSteps(campaigns.find((c) => c.id === cycleCampaignId));
+  }
   if (el.id.startsWith("preview-")) previewPath();
   if (el.id === "state-filter") filterCampaigns();
   if (el.dataset.required !== undefined)
@@ -650,7 +662,7 @@ let participantData,
   participantAnswers = {},
   participantId;
 function participantFrame(body) {
-  app.innerHTML = `<main id="main" class="participant"><header class="participant-brand"><span class="brand-name">escolta.</span><span class="muted">Estrella Damm · People</span></header>${body}<footer class="participant-footer">Prototip · Només credencials i respostes fictícies<br>Les respostes es pseudonimitzen. People només veu agregats.</footer></main>`;
+  app.innerHTML = `<main id="main" class="participant"><header class="participant-brand"><img class="brand-logo" src="/escoltamm-logo.png" alt="Escoltamm"><span class="muted">Estrella Damm · People</span></header>${body}<footer class="participant-footer">Prototip · Només credencials i respostes fictícies<br>Les respostes es pseudonimitzen. People només veu agregats.</footer></main>`;
 }
 async function participantPage() {
   participantId = location.pathname.split("/").at(-1);
@@ -672,7 +684,7 @@ async function participantPage() {
       return;
     }
     participantFrame(
-      `<div class="eyebrow">LA TEVA EXPERIÈNCIA IMPORTA</div><h1>${esc(participantData.title)}</h1><p class="participant-intro">${esc(participantData.introduction)}</p><section class="panel section"><h2>Un moment per escoltar-te.</h2><p>Introdueix la teva credencial fictícia per accedir a aquesta onada. No introdueixis identificadors reals.</p><form id="participant-auth"><div class="field"><label for="credential">Credencial de demo</label><input id="credential" name="credential" autocomplete="off" autocapitalize="characters" placeholder="DEMO-0001" required maxlength="80"></div><p id="participant-error" class="error-text" role="alert"></p><button class="btn btn-primary" type="submit">Accedir a la consulta ${icon("arrow")}</button></form></section><p class="muted"><small>${participantData.mode === "local" ? "Formulari local de contingència. No s’envia a Typeform." : "En continuar, obriràs el formulari de prova a Typeform."}</small></p>`,
+      `<h1>${esc(participantData.title)}</h1><p class="participant-intro">${esc(participantData.introduction)}</p><section class="panel section"><h2>Accés a la consulta</h2><form id="participant-auth"><div class="field"><label for="credential">Credencial de demo</label><input id="credential" name="credential" autocomplete="off" autocapitalize="characters" placeholder="DEMO-0001" required maxlength="80"></div><p id="participant-error" class="error-text" role="alert"></p><button class="btn btn-primary" type="submit">Accedir a la consulta ${icon("arrow")}</button></form></section><p class="muted"><small>${participantData.mode === "local" ? "Formulari local de contingència. No s’envia a Typeform." : "En continuar, obriràs el formulari de prova a Typeform."}</small></p>`,
     );
   } catch (e) {
     participantFrame(notice(esc(e.message), "error"));
@@ -688,7 +700,7 @@ function isVisible(q) {
 }
 function participantSurvey() {
   participantFrame(
-    `<div class="eyebrow">CONSULTA DE PROVA · MODE LOCAL</div><h1>${esc(participantData.title)}</h1><p class="participant-intro">${esc(participantData.introduction)}</p><form id="participant-survey"><div class="panel">${participantData.questions.map((q, i) => `<fieldset id="participant-q-${q.id}" ${isVisible(q) ? "" : "hidden"}><legend>${i + 1}. ${esc(q.text)} <small>(${q.obligatoria ? "obligatòria" : "opcional"})</small></legend><div>${q.tipus === "text_lliure" ? `<div class="field"><label for="text-${q.id}" class="visually-hidden">${esc(q.text)}</label><textarea id="text-${q.id}" name="${q.id}" maxlength="1000" placeholder="Comparteix només informació fictícia, sense noms ni dades de contacte."></textarea></div>` : q.opcions.map((o) => `<label class="answer-choice"><input type="radio" name="${q.id}" value="${esc(o.id)}" ${q.obligatoria ? "required" : ""}><span>${esc(o.etiqueta)}</span></label>`).join("")}${!q.obligatoria && q.tipus !== "text_lliure" ? `<button class="text-link" type="button" data-clear="${q.id}">Deixar sense resposta</button>` : ""}</div></fieldset>`).join("")}</div><p id="participant-error" class="error-text" role="alert"></p><button class="btn btn-primary" type="submit">Enviar la meva resposta ${icon("send")}</button></form>`,
+    `<h1>${esc(participantData.title)}</h1><p class="participant-intro">${esc(participantData.introduction)}</p><form id="participant-survey"><div class="panel">${participantData.questions.map((q, i) => `<fieldset id="participant-q-${q.id}" ${isVisible(q) ? "" : "hidden"}><legend>${i + 1}. ${esc(q.text)} <small>(${q.obligatoria ? "obligatòria" : "opcional"})</small></legend><div>${q.tipus === "text_lliure" ? `<div class="field"><label for="text-${q.id}" class="visually-hidden">${esc(q.text)}</label><textarea id="text-${q.id}" name="${q.id}" maxlength="1000" placeholder="Comparteix només informació fictícia, sense noms ni dades de contacte."></textarea></div>` : q.opcions.map((o) => `<label class="answer-choice"><input type="radio" name="${q.id}" value="${esc(o.id)}" ${q.obligatoria ? "required" : ""}><span>${esc(o.etiqueta)}</span></label>`).join("")}${!q.obligatoria && q.tipus !== "text_lliure" ? `<button class="text-link" type="button" data-clear="${q.id}">Deixar sense resposta</button>` : ""}</div></fieldset>`).join("")}</div><p id="participant-error" class="error-text" role="alert"></p><button class="btn btn-primary" type="submit">Enviar la meva resposta ${icon("send")}</button></form>`,
   );
 }
 document.addEventListener("change", (event) => {

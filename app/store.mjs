@@ -535,6 +535,8 @@ export class Store {
           taxa: w.results.taxa,
           days: w.config.dies,
           parent_id: w.parent_id,
+          has_questions: w.survey.preguntes.length > 0,
+          has_followup: Boolean(w.followup),
           closes: w.config.closes,
         };
       });

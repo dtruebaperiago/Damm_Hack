@@ -492,6 +492,7 @@ export function createApplication(config) {
         "/app.js": "app.js",
         "/styles.css": "styles.css",
         "/favicon.svg": "favicon.svg",
+        "/escoltamm-logo.png": "escoltamm-logo.png",
       };
       const name =
         staticFiles[path] ||
@@ -513,6 +514,7 @@ export function createApplication(config) {
           js: "text/javascript; charset=utf-8",
           css: "text/css",
           svg: "image/svg+xml",
+          png: "image/png",
         };
         return send(
           200,

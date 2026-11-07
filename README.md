@@ -11,6 +11,8 @@ pnpm start
 
 No cal compilació. L’origen per defecte és http://127.0.0.1:3000. En mode local la contrasenya sintètica és `equip-damm`. Copia `.env.example` a `.env` per configurar les connexions. Les claus són exclusivament del servidor; `.env` i `data/` estan exclosos de Git.
 
+Executa `pnpm demo:seed` per carregar les quatre campanyes de la captura a la base local `data/demo.sqlite`. Hi ha un esborrany, dues consultes en recollida i una onada tancada amb 180 respostes sintètiques. L’ordre només carrega els exemples si la base és buida.
+
 | Variable | Ús |
 | --- | --- |
 | `APP_MODE` | `demo` local o `connected` per publicar a Typeform |
@@ -55,7 +57,7 @@ pnpm check
 python tests/browser.py
 ```
 
-23 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats. Les dades i campanyes antigues només es carreguen explícitament des de `tests/fixtures/` als tests aïllats.
+23 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats. Els exemples es carreguen explícitament amb `pnpm demo:seed` o en els tests aïllats.
 
 `python tests/live-survey.py` és una prova optativa amb efectes reals: utilitza les claus locals, genera amb Groq i publica una consulta sintètica a Typeform. Requereix una instància connectada amb base buida i `LIVE_ORIGIN` (per defecte http://127.0.0.1:3002). No és part de `pnpm test`. Les captures i JSON de prova es desen a `test-results/`, exclòs de Git.
 

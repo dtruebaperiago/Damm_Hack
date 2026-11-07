@@ -1,6 +1,6 @@
 ---
 name: estrella-damm-brandkit
-description: Aplica un brandkit de treball d’Estrella Damm a interfícies, presentacions, documents i peces visuals. Inclou paleta provisional, tipografia alternativa, composició i to. Utilitza’l quan es demani aquesta marca o adaptar el prototip Damm a la seva identitat; no és el manual corporatiu del grup Damm.
+description: Aplica un brandkit de treball d’Estrella Damm a interfícies, presentacions, documents i peces visuals. Inclou observacions de webs oficials, tokens adaptats, tipografia, composició i un exemple HTML. Utilitza’l quan es demani aquesta marca o adaptar el prototip Damm a la seva identitat; no és el manual corporatiu del grup Damm.
 ---
 
 # Estrella Damm · Brandkit de treball
@@ -9,18 +9,13 @@ Crea peces coherents amb Estrella Damm preservant el format, el públic i l’ob
 
 ## Fonts i certesa
 
-Consulta [references/brandkit.md](references/brandkit.md) per a paleta, tipografia, composició, veu i fonts oficials.
-
-- **Verificat:** posicionament mediterrani i origen de 1876, segons les fonts oficials enllaçades.
-- **Proposta del kit:** codis de color, famílies alternatives, espaiat i composició. No hi ha un manual gràfic verificat ni recursos oficials empaquetats.
-
-Un manual o recurs oficial aportat per l’usuari preval sobre aquestes propostes. Conserva’n la procedència; no atribueixis els valors provisionals a la marca.
+Consulta [references/brandkit.md](references/brandkit.md) per a observacions, fonts, limitacions i adaptació. El CSS de les webs oficials mostra valors i tipografies concrets, però no constitueix un manual corporatiu. Distingeix Estrella Damm, la web corporativa Damm i la web de visites: no són un únic sistema visual. Els tokens i l'[exemple HTML](assets/brandkit-example.html) són una adaptació de treball, no una especificació oficial. Un manual oficial preval.
 
 ## Aplicació
 
 1. Identifica suport i públic a partir de la petició. Conserva les decisions de producte existents; aplica només els canvis visuals o editorials demanats.
 2. Tria un registre expressiu per a peces de marca o sobri i funcional per a eines de treball. Estrella Damm i el grup Damm no són intercanviables: preserva la denominació demanada.
-3. Aplica la referència. En web, reutilitza [assets/brand-tokens.css](assets/brand-tokens.css) a l’arrel corresponent amb `data-brand="estrella-damm"`. Si hi ha un sistema de disseny, integra-hi els valors sense sobreescriure globals aliens.
+3. Aplica la referència. En web, adapta [assets/brand-tokens.css](assets/brand-tokens.css) i consulta [l’exemple HTML](assets/brandkit-example.html) a l’arrel corresponent amb `data-brand="estrella-damm"`. Si hi ha un sistema de disseny, integra-hi els valors sense sobreescriure globals aliens.
 4. Utilitza el logotip oficial facilitat o un recurs verificat. Conserva proporcions, colors i composició. No el reconstrueixis amb text, una estrella genèrica o generació d’imatges. Si falta, continua amb el nom en text corrent, sense presentar-lo com a logotip, i indica la mancança al lliurament.
 5. Revisa el resultat al suport final: jerarquia, contrast, llegibilitat i integritat del logotip. Resumeix les adaptacions i els elements pendents de validar sense imposar una ronda d’aprovació per continuar treballant.
 
