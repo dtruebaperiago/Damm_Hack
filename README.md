@@ -40,6 +40,7 @@ La demo incorpora sis onades tancades de l’etapa 03. A **Campanyes** hi ha els
 5. **Publicació:** crea el formulari real a Typeform en mode connectat. La repetició recupera la publicació existent; un resultat remot incert exigeix reconciliació.
 6. **Difusió:** comparteix el QR de la plataforma per recollir respostes que es puguin importar. En connectat, el navegador obté un codi de seguiment de la sèrie i continua a Typeform sense credencial. El formulari local de demo continua amb credencial fictícia.
 7. **Resultats:** es calculen a partir de respostes acceptades en tancar l’onada. Les escales i seleccions utilitzen els ítems de cada consulta, sense insights sintètics inicials.
+8. **Anàlisi i seguiment:** amb Groq configurat, obre **Resultats** d’una onada tancada i prem **Generar anàlisi i accions**. El servidor prepara les fitxes publicables a partir de la instantània desada a PostgreSQL o SQLite. Revisa l’informe amb **Revisar l’informe de Groq** i selecciona una acció aprovada a **Accions** per crear el seguiment.
 
 El QR directe Typeform obre el formulari per previsualitzar-lo. Per importar una resposta cal obrir-la des de la plataforma amb una referència temporal `delivery` vàlida en el moment de la tramesa. Per compartir el QR de la plataforma amb mòbils externs, configura un `PUBLIC_ORIGIN` HTTPS accessible.
 
@@ -48,8 +49,8 @@ El QR directe Typeform obre el formulari per previsualitzar-lo. Per importar una
 - Només dades sintètiques. Les credencials `DEMO-0001`–`DEMO-0600` són per Planta; els altres públics tenen 120 credencials. No s’hi han d’introduir IDs reals.
 - En connectat, la cookie de seguiment dura 30 dies i es renova en continuar a Typeform. Es permet una resposta per navegador i onada mentre es conserva el codi. Canviar de navegador o esborrar la cookie permet respondre amb un codi nou. El mateix navegador pot ser compartit. En local, la deduplicació és per credencial i onada.
 - L’app publica una instantània immutable al tancament. Bases inferiors a 10 i complements petits estan protegits. No exposa respostes individuals.
-- **Text lliure:** després de retirar les frases i classificacions prefabricades, no hi ha textos admissibles en producció. Es descarten abans de persistir o enviar al model. Cal implementar i revisar la depuració de privacitat per analitzar comentaris arbitraris.
-- El catàleg d’accions i temes de la demo continua limitat a comunicació, suport i planificació. No genera insights sense evidència publicable. La generació de consultes és oberta a altres temes.
+- **Text lliure:** el prototip admet una llista tancada de frases sintètiques. People pot revisar-ne els temes i suports quan hi ha prou base i els textos encara es conserven. Els comentaris arbitraris es descarten abans de desar la resposta.
+- Groq rep fitxes qualitatives d’evidència publicable. El servidor adjunta les xifres i desa les revisions a `wave_analysis`. Les sis onades simulades de l’etapa 03 es mostren amb els seus KPI i seguiments.
 - Les preguntes marcades explícitament com a referència es preserven en seguiments; les noves consultes no incorporen referències prefabricades.
 - La purga local no elimina formularis/respostes del compte Typeform ni còpies externes. Neteja les proves remotes quan deixin de ser necessàries.
 
@@ -61,7 +62,7 @@ pnpm check
 python tests/browser.py
 ```
 
-37 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats.
+Les proves Node cobreixen el flux de Typeform a l’informe revisat en SQLite i PostgreSQL embegut amb respostes sintètiques i proveïdor Groq simulat. La prova Chromium recorre l’edició, la participació, el tancament i el seguiment.
 
 `python tests/live-survey.py` és una prova optativa amb efectes reals: utilitza les claus locals, genera amb Groq i publica una consulta sintètica a Typeform. Requereix una instància connectada amb base buida i `LIVE_ORIGIN` (per defecte http://127.0.0.1:3002). No és part de `pnpm test`. Les captures i JSON de prova es desen a `test-results/`, exclòs de Git.
 

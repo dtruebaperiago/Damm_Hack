@@ -24,5 +24,10 @@ CREATE TABLE IF NOT EXISTS response_links(
   shift TEXT NOT NULL, PRIMARY KEY(wave_id,participant)
 );
 CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS wave_analysis(
+  wave_id TEXT PRIMARY KEY REFERENCES waves(id),
+  revision INTEGER NOT NULL CHECK (revision > 0),
+  data TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS rate_limits(bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL);
 INSERT OR IGNORE INTO migrations VALUES(1);

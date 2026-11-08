@@ -34,6 +34,8 @@ pnpm start
 
 `db:check` comprova la connexió i aplica les migracions pendents. L’arrencada del servidor també les aplica dins d’una transacció amb bloqueig de migració. Amb `DATABASE_URL` buit s’utilitza SQLite; una URL configurada que falla no provoca un canvi silenciós a SQLite. PostgreSQL només carrega la simulació amb `LOAD_SIMULATION=1`; SQLite conserva la càrrega per defecte en mode demo.
 
+La migració 002 afegeix `escolta.wave_analysis` amb RLS per desar la revisió dels informes i dels temes. L’anàlisi fa servir les instantànies d’onades tancades i el servidor prepara l’evidència que envia a Groq.
+
 ## Compartir amb l’equip
 
 Invitar explícitament els desenvolupadors al projecte/organització Supabase amb els permisos adequats. Compartir una sessió d’agent no concedeix accés als companys. Els usuaris de People entren a la web amb les credencials de l’aplicació; no necessiten credencials PostgreSQL.

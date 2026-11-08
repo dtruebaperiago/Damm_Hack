@@ -14,6 +14,11 @@ import {
   importTypeformResponse,
 } from "./typeform-ingest.mjs";
 import { Store } from "./store.mjs";
+import { decodeJSON } from "./db.mjs";
+import {
+  analysisVersions, contrastThemes, reviewThemes, synthesisInput, themeInput,
+  validateSynthesis, validateThemes,
+} from "./analysis.mjs";
 import { loadSimulation } from "./simulation.mjs";
 import { template } from "./domain.mjs";
 import {
@@ -34,6 +39,18 @@ const cookieValue = (req, key) => {
 export async function createApplication(config) {
   const store = await new Store(config.dbPath, config).init();
   if (config.loadSimulation) await loadSimulation(store);
+  const groqReady = config.provider === "groq" && !!config.groqKey && !!config.model;
+  const processing = new Set();
+  const withGroq = async (id, work) => {
+    if (!groqReady) throw new AppError("Configura GROQ_API_KEY i GROQ_MODEL al servidor.", 503);
+    if (processing.has(id)) throw new AppError("Ja hi ha una anàlisi en curs per a l’onada.", 409);
+    processing.add(id);
+    try {
+      return await work();
+    } finally {
+      processing.delete(id);
+    }
+  };
   const passwordSalt = randomBytes(16),
     passwordHash = scryptSync(config.adminPassword, passwordSalt, 32);
   const secure = new URL(config.origin).protocol === "https:";
@@ -138,8 +155,6 @@ export async function createApplication(config) {
               w,
               item,
               item.definition || {},
-              config,
-              { classify: false },
             );
           }
         }
@@ -157,6 +172,7 @@ export async function createApplication(config) {
           mode: config.mode,
           integrations: {
             typeform: !!config.typeformToken,
+            analysis: groqReady,
             llm:
               !!(config.provider === "groq"
                 ? config.groqKey
@@ -293,14 +309,9 @@ export async function createApplication(config) {
       }
       if (path === "/api/calibration" && req.method === "GET") {
         await auth(req);
-        return send(
-          200,
-          await store.calibration({
-            sector: "Planta",
-            ubicacio: "Planta de demo",
-            torn: "Tots dos",
-          }),
-        );
+        const audience = { sector: "Planta", ubicacio: "Planta de demo", torn: "Tots dos" };
+        const calibration = await store.calibration(audience);
+        return send(200, { ...calibration, diagnostic: store.diagnostic(audience, calibration) });
       }
       if (path.startsWith("/api/campaigns")) {
         await auth(req);
@@ -311,13 +322,22 @@ export async function createApplication(config) {
           return send(201, await store.waveDTO(w.id));
         }
         const match = path.match(
-          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|followup|qr|typeform-qr|webhook|export))?$/,
+          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|analysis-review|themes|theme-review|followup|qr|typeform-qr|webhook|export))?$/,
         );
         if (!match) throw new AppError("Ruta no trobada.", 404);
         const [, id, action] = match;
         let w = await store.wave(id);
         if (!action && req.method === "GET")
           return send(200, await store.waveDTO(id));
+        if (req.method === "GET" && ["analysis-review", "theme-review"].includes(action)) {
+          const { revision, themeDraft, themes, draft, approved, base } = await store.analysis(id);
+          if (action === "theme-review" && themeDraft && !themes && !draft &&
+              w.snapshot && store.canReviewTexts(w, decodeJSON(w.snapshot)))
+            return send(200, { revision, ...themeDraft });
+          if (action === "analysis-review" && draft && !approved)
+            return send(200, { revision, base, draft });
+          throw new AppError("No hi ha cap esborrany pendent de revisió.", 404);
+        }
         if (["qr", "typeform-qr"].includes(action) && req.method === "GET") {
           if (!w.form_id)
             throw new AppError(
@@ -371,6 +391,8 @@ export async function createApplication(config) {
         else if (action === "generate") {
           if (w.state !== "draft")
             throw new AppError("Només es pot generar sobre un esborrany.", 409);
+          const calibration = await store.calibration(w.config.public);
+          const sondeig = store.diagnostic(w.config.public, calibration);
           const survey = await generateSurvey(
             {
               objectiu: w.config.objectiu,
@@ -378,7 +400,8 @@ export async function createApplication(config) {
               conceptes: w.config.conceptes,
               context: w.config.context,
               public: w.config.public,
-              sondeig: await store.diagnostic(w),
+              sondeig,
+              ...(w.config.seguiment_accio ? { seguiment_accio: w.config.seguiment_accio } : {}),
               restriccions: {
                 temes_exclosos: w.config.exclusions,
                 tractament:
@@ -388,7 +411,13 @@ export async function createApplication(config) {
             config,
             w.parent_id ? (await store.wave(w.parent_id)).survey : template,
           );
-          await store.edit(id, w.version, survey);
+          await store.edit(id, w.version, survey, undefined, {
+            public: w.config.public,
+            sondeig,
+            distribucio_historica: calibration.percentatges
+              ? { percentatges: calibration.percentatges, bases: calibration.bases }
+              : null,
+          });
         } else if (action === "publish") {
           if (config.mode !== "demo" && !config.typeformToken)
             throw new AppError(
@@ -493,10 +522,10 @@ export async function createApplication(config) {
             definition = await client.definition(w.form_id),
             items = await client.responses(w.form_id);
           for (const item of items)
-            await importTypeformResponse(store, w, item, definition, config);
-        } else if (action === "close") await store.close(id);
-        else if (action === "proposals") {
-          const evidence = (await store.results(id)).evidence;
+            await importTypeformResponse(store, w, item, definition);
+        } else if (action === "close") await store.close(id, body.referencia_id);
+        else if (action === "proposals" && config.provider !== "groq" && !(await store.analysis(id)).revision) {
+          const evidence = decodeJSON(w.snapshot)?.evidence ?? [];
           if (!evidence.length)
             throw new AppError(
               "Encara no hi ha evidència publicable per proposar accions.",
@@ -510,6 +539,75 @@ export async function createApplication(config) {
                 config,
               ),
             );
+        } else if (["proposals", "analysis-review", "themes", "theme-review"].includes(action)) {
+          if (w.state !== "closed" || !w.snapshot)
+            throw new AppError("Tanca la recollida abans d’analitzar l’onada.", 409);
+          const snapshot = decodeJSON(w.snapshot);
+          const { revision, ...state } = await store.analysis(id);
+          const metadata = { model: config.model, instruccions: analysisVersions.instruccions };
+          if (action === "themes" && !state.themeDraft) {
+            if (state.draft || state.themes) throw new AppError("La revisió de temes ja està tancada.", 409);
+            await withGroq(id, async () => {
+              if (!store.canReviewTexts(w, snapshot))
+                throw new AppError("Els textos de l’onada no estan disponibles.", 409);
+              const input = themeInput(w, snapshot, await store.rows(id));
+              if (!input) throw new AppError("No hi ha prou textos sintètics depurats disponibles.");
+              const { textos, ...context } = input;
+              const data = await llmJSON("theme_discovery", {
+                ...context, textos: textos.map(({ resposta_ref, text }) => ({ resposta_ref, text })),
+              }, config);
+              const temes = await contrastThemes(validateThemes(data, input), vincles =>
+                llmJSON("theme_contrast", { enunciat: input.enunciat, vincles }, config));
+              await store.tx(async () => {
+                const current = await store.wave(id);
+                if (!store.canReviewTexts(current, snapshot) ||
+                    !themeInput(current, snapshot, await store.rows(id)))
+                  throw new AppError("Els textos de l’onada han caducat.", 409);
+                await store.writeAnalysis(id, revision, {
+                  ...state, themeDraft: { base: snapshot.textos, temes, ...metadata },
+                });
+              });
+            });
+          }
+          if (action === "theme-review") {
+            if (!state.themeDraft || state.themes || state.draft || body.revision !== revision)
+              throw new AppError("La revisió de temes ja no és vigent.", 409);
+            await store.tx(async () => {
+              const current = await store.wave(id);
+              if (!store.canReviewTexts(current, snapshot))
+                throw new AppError("Els textos de l’onada han caducat.", 409);
+              const themes = reviewThemes(state.themeDraft, body.temes);
+              const themeReview = body.temes.map(({ id, refs }) => ({ id, refs }));
+              await store.writeAnalysis(id, revision, { ...state, themes, themeReview });
+            });
+          }
+          if (action === "proposals" && !state.draft) {
+            const base = store.reportBase(w, snapshot, state.themes ?? []);
+            if (!base.evidencies.length && !base.diagnostic_biaixos.length)
+              throw new AppError("Dades insuficients per elaborar l’anàlisi.");
+            await withGroq(id, async () => {
+              const data = await llmJSON("analysis", synthesisInput(w, base), config);
+              const draft = validateSynthesis(data, base, w.survey);
+              await store.writeAnalysis(id, revision, { ...state, base, draft: { ...draft, ...metadata } });
+            });
+          }
+          if (action === "analysis-review") {
+            if (!state.draft || state.approved || body.revision !== revision)
+              throw new AppError("La revisió de l’informe ja no és vigent.", 409);
+            const select = (field) => {
+              const ids = body[field];
+              if (!Array.isArray(ids) || new Set(ids).size !== ids.length ||
+                  ids.some(id => !state.draft[field].some(item => item.id === id)))
+                throw new AppError("Hi ha blocs que no corresponen a la revisió.");
+              return state.draft[field].filter(item => ids.includes(item.id));
+            };
+            const approved = {
+              instantania_id: state.base.instantania_id, revisio: revision + 1,
+              model: state.draft.model, instruccions: state.draft.instruccions,
+              troballes: select("troballes"), accions: select("accions"),
+            };
+            await store.writeAnalysis(id, revision, { ...state, approved });
+          }
         } else if (action === "followup") {
           const child = await store.followup(id, body.action);
           return send(200, {

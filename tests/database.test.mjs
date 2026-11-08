@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { Database, postgresOptions } from "../app/db.mjs";
 
@@ -38,6 +39,8 @@ test("PostgreSQL migrations use JSONB, foreign keys, unique responses and restri
   const engine = new PGlite();
   const db = new Database(null, { postgres: engine });
   try {
+    await engine.exec(readFileSync(new URL("../app/migrations/postgres/001_initial.sql", import.meta.url), "utf8"));
+    await db.prepare("INSERT INTO escolta.sessions VALUES(?,?)").run("existing-session", 123);
     await db.migrate();
     await db.migrate();
     assert.equal(
@@ -46,7 +49,14 @@ test("PostgreSQL migrations use JSONB, foreign keys, unique responses and restri
           .prepare("SELECT COUNT(*)::int AS n FROM escolta.migrations")
           .get()
       ).n,
-      1,
+      2,
+    );
+    assert.ok(await db.prepare("SELECT 1 FROM escolta.sessions WHERE token_hash=?").get("existing-session"));
+    assert.deepEqual(
+      await db.prepare(
+        "SELECT a.atttypid::regtype::text AS data_type, c.relrowsecurity FROM pg_class c JOIN pg_attribute a ON a.attrelid=c.oid WHERE c.oid='escolta.wave_analysis'::regclass AND a.attname='data'",
+      ).get(),
+      { data_type: "jsonb", relrowsecurity: true },
     );
     const types = await db
       .prepare(

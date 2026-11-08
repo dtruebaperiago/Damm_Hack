@@ -9,8 +9,10 @@ import {
   historical,
   paired,
   catalog,
+  THRESHOLD,
 } from "./domain.mjs";
 import { AppError } from "./providers.mjs";
+import { compareSnapshots, makeReportBase, policyFor } from "./analysis.mjs";
 const now = () => Date.now();
 const json = JSON.stringify;
 const locations = {
@@ -19,6 +21,14 @@ const locations = {
   Comercial: "Zona comercial de demo",
   Oficines: "Oficina de demo",
 };
+const caNumber = new Intl.NumberFormat("ca-ES", { maximumFractionDigits: 1 });
+const measurement = (w) => ({ survey: w.survey, public: w.config.public, protocol: w.config.protocol });
+const retention = 30 * 86400000;
+const stableFingerprint = (value) => json(JSON.parse(value), (_, item) =>
+  item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]]))
+    : item);
+
 export class Store {
   constructor(path, config) {
     this.settings = config;
@@ -56,11 +66,11 @@ export class Store {
   async tx(fn) {
     return this.db.transaction(fn);
   }
-  async wave(id) {
+  async wave(id, { lock = true } = {}) {
     const w = await this.db
       .prepare(
         "SELECT * FROM waves WHERE id=?" +
-          (this.db.postgres && this.db.context.getStore() ? " FOR UPDATE" : ""),
+          (lock && this.db.postgres && this.db.context.getStore() ? " FOR UPDATE" : ""),
       )
       .get(id);
     if (!w) throw new AppError("No s’ha trobat la campanya.", 404);
@@ -116,38 +126,26 @@ export class Store {
   }
   async createWave(
     input,
-    {
-      id = randomUUID(),
-      cycle = randomUUID(),
-      parent = null,
-      survey = template,
-    } = {},
+    { id = randomUUID(), cycle = randomUUID(), parent = null, survey = template } = {},
   ) {
-    const c = this.validateConfig(input);
-    await this.tx(async () => {
-      await this.db
-        .prepare(
-          "INSERT INTO waves(id,parent_id,cycle,config,survey,source,created_at) VALUES(?,?,?,?,?,?,?)",
-        )
-        .run(
-          id,
-          parent,
-          cycle,
-          json(c),
-          json(survey),
-          this.settings.mode === "demo" ? "local" : "typeform",
-          now(),
-        );
-      await this.provision(cycle, c);
-    });
-    return await this.wave(id);
+    return this.tx(() => this.insertWave(id, cycle, parent, this.validateConfig(input), survey));
+  }
+  async insertWave(id, cycle, parent, config, survey) {
+    await this.db
+      .prepare(
+        "INSERT INTO waves(id,parent_id,cycle,config,survey,source,created_at) VALUES(?,?,?,?,?,?,?)",
+      )
+      .run(id, parent, cycle, json(config), json(survey),
+        this.settings.mode === "demo" ? "local" : "typeform", now());
+    await this.provision(cycle, config);
+    return this.wave(id);
   }
   async saveRevision(w) {
     await this.db
       .prepare("INSERT INTO revisions VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING")
       .run(w.id, w.version, json(w.survey), json(w.config), w.approved_hash);
   }
-  async edit(id, version, survey, configInput) {
+  async edit(id, version, survey, configInput, generation) {
     return await this.tx(async () => {
       const w = await this.wave(id);
       if (!["draft", "approved"].includes(w.state) || w.version !== version)
@@ -160,7 +158,7 @@ export class Store {
       } else {
         const errors = validateSurvey(
           survey,
-          w.parent_id ? this.wave(w.parent_id).survey : template,
+          w.parent_id ? (await this.wave(w.parent_id, { lock: false })).survey : template,
         );
         if (errors.length) throw new AppError(errors.join(" "));
         if (!/pseudonimitz/i.test(survey.introduccio) || !/onad/i.test(survey.introduccio))
@@ -174,6 +172,13 @@ export class Store {
             "El seguiment ha de conservar el públic original.",
           );
       }
+      if (configInput) {
+        if (w.config.generacio) config.generacio = w.config.generacio;
+        if (w.config.seguiment_accio) config.seguiment_accio = w.config.seguiment_accio;
+        if (!isDeepStrictEqual(config.public, w.config.public))
+          survey = { ...survey, adaptacions: survey.adaptacions.filter(a => a.pregunta_id === undefined) };
+      }
+      if (generation) config = { ...config, generacio: generation };
       await this.saveRevision(w);
       await this.db
         .prepare(
@@ -196,7 +201,7 @@ export class Store {
         throw new AppError("Només es pot aprovar l’esborrany vigent.", 409);
       const errors = validateSurvey(
         w.survey,
-        w.parent_id ? (await this.wave(w.parent_id)).survey : template,
+        w.parent_id ? (await this.wave(w.parent_id, { lock: false })).survey : template,
       );
       if (errors.length) throw new AppError(errors.join(" "));
       const hash = this.hash(json({ survey: w.survey, config: w.config }));
@@ -377,12 +382,29 @@ export class Store {
       }
     });
   }
-  async close(id) {
-    return await this.tx(async () => {
+  async earlierWaves(wave) {
+    const earlier = [];
+    for (let id = wave.parent_id; id;) {
+      const previous = await this.wave(id, { lock: false });
+      earlier.unshift(previous);
+      id = previous.parent_id;
+    }
+    return earlier;
+  }
+  async comparisonOptions(w) {
+    return (await this.earlierWaves(w)).filter(previous => previous.snapshot &&
+      paired(measurement(previous), measurement(w), [], []).estat === "comparable");
+  }
+  async close(id, baseline) {
+    return this.tx(async () => {
       const w = await this.wave(id);
-      if (w.state === "closed") return await this.results(id);
+      if (w.state === "closed") return decodeJSON(w.snapshot);
       if (w.state !== "published")
         throw new AppError("Només es pot tancar una onada publicada.", 409);
+      const previous = baseline
+        ? (await this.comparisonOptions(w)).find(wave => wave.id === baseline)
+        : (await this.earlierWaves(w))[0];
+      if (baseline && !previous) throw new AppError("L’onada de referència no és compatible.");
       const rows = await this.rows(id),
         snapshot = aggregate(
           rows,
@@ -390,8 +412,7 @@ export class Store {
           w.survey,
           w.config.public,
         );
-      if (rows.length && rows.every((r) => r.torn === "Desconegut"))
-        snapshot.torns = [];
+      if (rows.length && rows.every(r => r.torn === "Desconegut")) snapshot.torns = [];
       const sources = Object.entries(
         rows.reduce((out, r) => {
           out[r.source] = (out[r.source] || 0) + 1;
@@ -405,22 +426,19 @@ export class Store {
       }));
       snapshot.closed_at = new Date().toISOString();
       snapshot.historic = await this.calibration(w.config.public);
-      if (w.parent_id) {
-        const parent = await this.wave(w.parent_id);
+      snapshot.politica_analisi = policyFor(w.survey);
+      if (previous) {
         snapshot.comparacio = paired(
-          {
-            survey: parent.survey,
-            public: parent.config.public,
-            protocol: parent.config.protocol,
-          },
-          {
-            survey: w.survey,
-            public: w.config.public,
-            protocol: w.config.protocol,
-          },
-          await this.rows(parent.id),
+          measurement(previous),
+          measurement(w),
+          await this.rows(previous.id),
           rows,
         );
+        if (w.source === "typeform" && snapshot.comparacio.estat === "comparable")
+          snapshot.comparacio.limit = "El seguiment vincula respostes del mateix navegador. Un navegador compartit pot correspondre a persones diferents.";
+        snapshot.comparacio.referencia_id = previous.id;
+        if (previous.snapshot)
+          snapshot.comparacions = compareSnapshots(decodeJSON(previous.snapshot), snapshot, previous, w);
       }
       await this.db
         .prepare("UPDATE waves SET state='closed',snapshot=? WHERE id=?")
@@ -428,41 +446,77 @@ export class Store {
       return snapshot;
     });
   }
+  async analysis(id) {
+    const row = await this.db.prepare("SELECT revision,data FROM wave_analysis WHERE wave_id=?").get(id);
+    return row ? { revision: row.revision, ...decodeJSON(row.data) } : { revision: 0 };
+  }
+  async writeAnalysis(id, revision, data) {
+    const changed = revision === 0
+      ? await this.db.prepare(
+          `INSERT INTO wave_analysis(wave_id,revision,data) VALUES(?,1,?)
+           ON CONFLICT(wave_id) DO NOTHING RETURNING revision`,
+        ).get(id, json(data))
+      : await this.db.prepare(
+          `UPDATE wave_analysis SET revision=revision+1,data=?
+           WHERE wave_id=? AND revision=? RETURNING revision`,
+        ).get(json(data), id, revision);
+    if (!changed) throw new AppError("La revisió ha canviat. Torna a obrir l’anàlisi.", 409);
+  }
+  usesAnalysis(w, state) {
+    return w.source !== "simulation" &&
+      (state.revision > 0 || this.settings.provider === "groq" ||
+        (this.settings.mode !== "demo" && this.settings.provider !== "openai"));
+  }
+  canReviewTexts(w, snapshot) {
+    const since = w.source === "typeform" ? (Date.parse(snapshot.closed_at) || w.created_at) : w.created_at;
+    return Boolean(snapshot.textos >= THRESHOLD && since >= now() - retention);
+  }
+  reportBase(w, snapshot, themes) {
+    return makeReportBase(w, snapshot, this.diagnostic(w.config.public, snapshot.historic),
+      themes, value => this.hash(stableFingerprint(value)));
+  }
   async results(id) {
-    const w = await this.wave(id);
-    return w.snapshot
-      ? decodeJSON(w.snapshot)
-      : {
-          total: null,
-          taxa: null,
-          population: w.config.population,
-          metrics: [],
-          torns: [],
-          temes: [],
-          evidence: [],
-          textos: null,
-          historic: await this.calibration(w.config.public),
-          recollint: true,
-        };
+    return this.resultFor(await this.wave(id));
+  }
+  async resultFor(w, state) {
+    if (!w.snapshot) return {
+      total: null, taxa: null, population: w.config.population,
+      metrics: [], torns: [], temes: [], evidence: [], textos: null,
+      historic: await this.calibration(w.config.public), recollint: true,
+    };
+    const snapshot = decodeJSON(w.snapshot);
+    if (w.source === "simulation") return snapshot;
+    state ??= await this.analysis(w.id);
+    if (!this.usesAnalysis(w, state)) return snapshot;
+    const themes = state.themes ?? [];
+    const base = state.base ?? this.reportBase(w, snapshot, themes);
+    return { ...snapshot, temes: state.themes ?? (snapshot.politica_analisi ? [] : snapshot.temes),
+      evidence: base.evidencies, informe_base: base, informe: state.approved ?? null };
   }
   async proposals(id) {
     const w = await this.wave(id);
+    return this.proposalsFor(w, await this.analysis(id));
+  }
+  proposalsFor(w, state) {
+    if (state.approved) return state.approved.accions.map(a => ({
+      ...a, accio_id: a.id, origen: "Groq · Revisada per People",
+      evidencia: state.base.evidencies.filter(e => a.evidencia_ids.includes(e.id)),
+      diagnostic: state.base.diagnostic_biaixos.filter(d => a.diagnostic_ids.includes(d.id)),
+    }));
     if (w.proposals) return decodeJSON(w.proposals);
-    return (await this.results(id)).evidence
+    if (this.usesAnalysis(w, state) || this.settings.mode !== "demo") return [];
+    return (decodeJSON(w.snapshot)?.evidence ?? [])
       .filter((e) => e.tema)
       .flatMap((e) =>
-        catalog
-          .filter((a) => a.tema === e.tema)
-          .map((a) => ({
-            accio_id: a.id,
-            evidencia_ids: [e.id],
-            motiu: `${e.n} textos analitzables de ${e.base} esmenten ${e.text.toLowerCase()}.`,
-            origen: "Regles de demo · no és una crida IA",
-          })),
-      );
+        catalog.filter(a => a.tema === e.tema).map(a => ({
+          accio_id: a.id,
+          evidencia_ids: [e.id],
+          motiu: `${e.n} textos analitzables de ${e.base} esmenten ${e.text.toLowerCase()}.`,
+          origen: "Regles de demo · no és una crida IA",
+        })));
   }
   async saveProposals(id, data) {
-    const evidence = (await this.results(id)).evidence;
+    const evidence = decodeJSON((await this.wave(id)).snapshot)?.evidence ?? [];
     if (
       !Array.isArray(data.propostes) ||
       data.propostes.length > 5 ||
@@ -494,55 +548,91 @@ export class Store {
     );
   }
   async followup(id, action) {
-    return this.tx(async () => {
-      const w = await this.wave(id);
-      const found = await this.db
-        .prepare("SELECT id FROM waves WHERE parent_id=?")
-        .get(id);
-      if (found) return await this.wave(found.id);
-      const p = (await this.proposals(id)).find((p) => p.accio_id === action);
-      if (w.state !== "closed" || !p)
-        throw new AppError("Cal una acció vinculada a evidència publicable.");
-      const a = catalog.find((a) => a.id === action),
-        survey = structuredClone(w.survey);
-      survey.titol = "Seguiment · " + w.survey.titol;
-      const c = w.config;
-      const evidence = (await this.results(id)).evidence;
-      const child = await this.createWave(
-        {
-          titol: "Seguiment · " + c.titol,
-          objectiu: c.objectiu,
-          decisio: c.decisio,
-          context: `${c.context}\nAcció seleccionada: ${a.descripcio}`,
-          sector: c.public.sector,
-          ubicacio: c.public.ubicacio,
-          torn: c.public.torn,
-          dies: c.dies,
-          exclusions: c.exclusions,
-        },
-        { cycle: w.cycle, parent: id, survey },
+    return this.tx(() => this.selectFollowup(id, action));
+  }
+  async selectFollowup(id, action) {
+    const w = await this.wave(id);
+    const found = await this.db
+      .prepare("SELECT id FROM waves WHERE parent_id=?")
+      .get(id);
+    if (found) {
+      if (w.selected_action && decodeJSON(w.selected_action).id !== action)
+        throw new AppError("L’onada ja té un seguiment vinculat a una altra acció.", 409);
+      return this.wave(found.id, { lock: false });
+    }
+    const state = await this.analysis(id);
+    const p = this.proposalsFor(w, state).find((p) => p.accio_id === action);
+    if (w.state !== "closed" || !p)
+      throw new AppError("Cal una acció vinculada a evidència publicable.");
+    const a = p.seguiment ? { ...p, descripcio: p.primer_pas, responsable: p.rol_suggerit }
+      : catalog.find((a) => a.id === action);
+    const survey = structuredClone(w.survey);
+    survey.titol = ("Seguiment · " + w.survey.titol).slice(0, 180);
+    if (p.seguiment) {
+      let questionId = "seguiment_accio";
+      while (survey.preguntes.some(q => q.id === questionId)) questionId += "_nou";
+      const follow = p.seguiment;
+      const question = {
+        id: questionId, text: follow.pregunta_adaptable,
+        que_mesura: "Arribada o ús de l’acció seleccionada",
+        quina_decisio_informa: "Valorar el seguiment de l’acció",
+        tipus: "seleccio_unica", obligatoria: false, de_referencia: false,
+        condicio_de_visualitzacio: null,
+        opcions: follow.opcions_suggerides.map((etiqueta, i) => ({ id: `opcio_${i + 1}`, etiqueta })),
+      };
+      const branchParents = new Set(survey.preguntes.flatMap(q =>
+        (q.condicio_de_visualitzacio?.totes ?? []).map(c => c.pregunta_id)));
+      if (survey.preguntes.length < 6) survey.preguntes.push(question);
+      else {
+        const position = survey.preguntes.findLastIndex(q => !q.de_referencia && !branchParents.has(q.id));
+        if (position !== -1) survey.preguntes[position] = question;
+      }
+    }
+    const c = w.config;
+    survey.adaptacions = survey.adaptacions.filter(a => a.pregunta_id === undefined || (
+      (!c.generacio || isDeepStrictEqual(c.generacio.public, c.public)) &&
+      survey.preguntes.some(q => q.id === a.pregunta_id)
+    ));
+    const childConfig = {
+      ...c, titol: `Seguiment · ${c.titol}`.slice(0, 2000),
+      context: `Acció seleccionada: ${a.descripcio}\n${c.context}`.slice(0, 2000),
+      opens: now(), closes: now() + c.dies * 86400000,
+    };
+    delete childConfig.generacio;
+    if (p.seguiment) childConfig.seguiment_accio = p.seguiment;
+    const child = await this.insertWave(randomUUID(), w.cycle, id, childConfig, survey);
+    await this.db
+      .prepare("UPDATE waves SET selected_action=? WHERE id=?")
+      .run(
+        json({
+          ...a,
+          instantania_id: p.seguiment ? state.base.instantania_id : undefined,
+          evidence: p.evidencia ?? p.evidencia_ids.map((eid) =>
+            decodeJSON(w.snapshot).evidence.find((e) => e.id === eid),
+          ),
+          followup: child.id,
+        }),
+        id,
       );
-      await this.db
-        .prepare("UPDATE waves SET selected_action=? WHERE id=?")
-        .run(
-          json({
-            ...a,
-            evidence: p.evidencia_ids.map((eid) =>
-              evidence.find((e) => e.id === eid),
-            ),
-            followup: child.id,
-          }),
-          id,
-        );
-      return child;
-    });
+    return child;
   }
   async waveDTO(id) {
-    const w = await this.wave(id),
-      results = await this.results(id),
-      child = await this.db
-        .prepare("SELECT id FROM waves WHERE parent_id=?")
-        .get(id);
+    const w = await this.wave(id);
+    const [state, child, calibration] = await Promise.all([
+      this.analysis(id),
+      this.db.prepare("SELECT id FROM waves WHERE parent_id=?").get(id),
+      this.calibration(w.config.public),
+    ]);
+    const results = await this.resultFor(w, state);
+    const diagnostic = this.diagnostic(w.config.public, calibration);
+    const generation = w.config.generacio;
+    let chart = calibration;
+    if (generation && isDeepStrictEqual(generation.public, w.config.public)) {
+      if (Object.hasOwn(generation, "distribucio_historica"))
+        chart = generation.distribucio_historica;
+      else if (!isDeepStrictEqual(generation.sondeig, diagnostic))
+        chart = null;
+    }
     return {
       id: w.id,
       parent_id: w.parent_id,
@@ -554,11 +644,20 @@ export class Store {
       published: !!w.form_id,
       form_url: w.form_url,
       results,
-      diagnostic: this.diagnostic(w),
-      proposals:
-        this.settings.mode === "demo" || w.proposals
-          ? await this.proposals(id)
-          : [],
+      diagnostic,
+      distribucio_historica: chart?.percentatges
+        ? { percentatges: chart.percentatges, bases: chart.bases }
+        : null,
+      proposals: this.proposalsFor(w, state),
+      comparacions_disponibles: w.state === "published" && w.parent_id
+        ? (await this.comparisonOptions(w))
+          .map(wave => ({ id: wave.id, titol: wave.config.titol }))
+        : [],
+      analysis: w.state === "closed" && this.usesAnalysis(w, state) ? {
+        tema: state.themes ? "revisat" : state.draft ? "tancat" : !this.canReviewTexts(w, results) ? "indisponible" :
+          state.themeDraft ? "pendent" : "disponible",
+        informe: state.approved ? "revisat" : state.draft ? "pendent" : "disponible",
+      } : null,
       selected_action: w.selected_action ? decodeJSON(w.selected_action) : null,
       followup: child?.id || null,
     };
@@ -588,8 +687,35 @@ export class Store {
     }
     return list;
   }
-  diagnostic() {
-    return [];
+  diagnostic(audience, h) {
+    if (!h || h.abast === "insuficient") return [];
+    const [reference, voluntary] = h.bases;
+    const [referenceExtremes, voluntaryExtremes] = h.extrems.map(n => caNumber.format(n));
+    const metadata = {
+      abast: h.abast,
+      public: { ...audience, torn: "Tots dos" },
+      periode: h.periode,
+      origen: h.origen,
+      pregunta: h.pregunta,
+      estat: "senyal_mesurat",
+    };
+    return [
+      {
+        ...metadata,
+        id: "historic_extrems",
+        titol: "Pes de les respostes extremes",
+        observacio: `Les puntuacions 1 i 5 sumen el ${voluntaryExtremes}% en la recollida voluntària (n=${voluntary}) i el ${referenceExtremes}% en la referència (n=${reference}). Diferència de ${caNumber.format(h.diferencia)} punts percentuals.`,
+        limitacio: "El contrast apunta a un risc d’autoselecció en la recollida voluntària. La pregunta històrica és de clima i el resultat descriu aquella mostra.",
+      },
+      {
+        ...metadata,
+        id: "historic_participacio",
+        titol: "Participació aparent i risc de no resposta",
+        observacio: `La recollida voluntària va registrar ${voluntary} trameses${h.poblacio_elegible
+          ? ` per a ${h.poblacio_elegible} persones elegibles` : ""} (${caNumber.format(h.taxa)}% de participació aparent).`,
+        limitacio: "El QR compartit deixa la unicitat sense verificar. Les persones que no van respondre podrien tenir una experiència diferent.",
+      },
+    ];
   }
   async rateLimit(bucket, limit = 10) {
     const time = now();
@@ -615,7 +741,7 @@ export class Store {
       .prepare(`DELETE FROM deliveries WHERE expires_at<? AND wave_id NOT IN
         (SELECT id FROM waves WHERE state='published' AND source='typeform')`)
       .run(now() - 7 * 86400000);
-    const cutoff = now() - 30 * 86400000;
+    const cutoff = now() - retention;
     // Purga els registres restringits i l’analítica individual; només resta la instantània agregada final.
     for (const { id, cycle } of await this.db
       .prepare(
@@ -624,8 +750,16 @@ export class Store {
          ELSE created_at END < ?`,
       )
       .all(cutoff)) {
-      await this.db.prepare("DELETE FROM deliveries WHERE wave_id=?").run(id);
-      await this.db.prepare("DELETE FROM accepted WHERE wave_id=?").run(id);
+      await this.tx(async () => {
+        await this.wave(id);
+        await this.db.prepare("DELETE FROM deliveries WHERE wave_id=?").run(id);
+        await this.db.prepare("DELETE FROM accepted WHERE wave_id=?").run(id);
+        const [removeRestricted, hasRestricted] = this.db.postgres
+          ? ["data - 'themeDraft' - 'themeReview'", "(jsonb_exists(data, 'themeDraft') OR jsonb_exists(data, 'themeReview'))"]
+          : ["json_remove(data, '$.themeDraft', '$.themeReview')", "(json_type(data, '$.themeDraft') IS NOT NULL OR json_type(data, '$.themeReview') IS NOT NULL)"];
+        await this.db.prepare("UPDATE wave_analysis SET data=" + removeRestricted +
+          ",revision=revision+1 WHERE wave_id=? AND " + hasRestricted).run(id);
+      });
       if (
         !(await this.db
           .prepare(

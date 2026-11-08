@@ -4,6 +4,7 @@ export const THRESHOLD = 10;
 export const SIGNALS = [
   "participacio_nit",
   "historic_extrems",
+  "historic_participacio",
   "cobertura",
   "moment",
 ];
@@ -39,13 +40,38 @@ export const topics = {
   planificacio: "Antelació dels torns",
   altres: "Altres / no classificable",
 };
-// shortcut: el text lliure queda exclòs fins a disposar de depuració de privacitat revisada.
+// Only exact, known synthetic phrases survive ingestion. Never retain arbitrary free text.
 export const safeTexts = {};
+const syntheticTexts = new Set([
+  "Entre el tauler i el full de torn hi ha instruccions diferents.",
+  "Un únic lloc per consultar les instruccions, ara no sé quina versió val.",
+  "Vaig veure dos papers amb indicacions diferents. Quin és el bo?",
+  "El que es va dir al relleu no ho vaig trobar al quadrant.",
+  "Amb tot repartit costa trobar la informació quan toca.",
+  "Mateix full al tauler i al mòbil, si pot ser.",
+  "Em vaig fer un embolic, hi havia un full nou i l’antic seguia penjat.",
+  "Un exemple amb un canvi de nit a dia, pas a pas.",
+  "Un esquema senzill del que passa després de l’últim torn de nit.",
+  "Amb un dibuix del quadrant ho hauria vist més clar.",
+  "Tenir el quadrant de la setmana vinent una mica abans.",
+  "Que avisin abans si es mou el dia de descans.",
+  "El vaig veure tard i ja m’havia organitzat.",
+  "Que quedi escrit com es pot demanar un intercanvi.",
+  "Saber on anar quan el canvi ja està fet i no el pots fer.",
+  "Veure la rotació amb temps per organitzar-me a casa.",
+  "Explicar com encaixar els dies de descans entre els torns.",
+  "Més exemples, amb l’explicació sola em vaig perdre.",
+  "Ho vaig preguntar al relleu, m’aniria bé poder-ho consultar després.",
+  "La informació en 2 minuts a l’inici hauria anat bé.",
+]);
+export const isSyntheticText = (value) =>
+  typeof value === "string" && (syntheticTexts.has(value) || Object.hasOwn(safeTexts, value));
 export const visible = (q, answers) =>
   !q.condicio_de_visualitzacio ||
   q.condicio_de_visualitzacio.totes.every((c) =>
     c.opcions_ids.includes(answers[c.pregunta_id]),
   );
+export const favorableOptions = (q) => q.analisi?.favorables ?? ["4", "5"];
 const nonempty = (s, max = 2000) =>
   typeof s === "string" && s.trim().length > 0 && s.length <= max;
 export function validateSurvey(s, reference = template, signals = SIGNALS) {
@@ -64,7 +90,10 @@ export function validateSurvey(s, reference = template, signals = SIGNALS) {
     !Array.isArray(s.adaptacions) ||
     s.adaptacions.length > 12 ||
     s.adaptacions.some(
-      (a) => !a || !signals.includes(a.senyal_id) || !nonempty(a.proposta),
+      (a) => !a || !nonempty(a.proposta) || (
+        !signals.includes(a.senyal_id) &&
+        !(a.pregunta_id !== undefined && ["cobertura", "moment"].includes(a.senyal_id))
+      ),
     )
   )
     errors.push("Cada adaptació ha de citar un senyal existent.");
@@ -101,6 +130,16 @@ export function validateSurvey(s, reference = template, signals = SIGNALS) {
       continue;
     }
     const ids = q.opcions.map((o) => o?.id);
+    if (q.analisi !== undefined) {
+      const a = q.analisi;
+      if (q.tipus !== "escala_1_5" || !a || !Array.isArray(a.favorables) ||
+          !a.favorables.length || a.favorables.length > 4 ||
+          new Set(a.favorables).size !== a.favorables.length ||
+          a.favorables.some(v => typeof v !== "string" || !/^[1-5]$/.test(v)) ||
+          (a.llindar_pct !== undefined &&
+            (!Number.isInteger(a.llindar_pct) || a.llindar_pct < 0 || a.llindar_pct > 100)))
+        errors.push(`Pregunta ${i + 1}: política d’anàlisi invàlida.`);
+    }
     if (
       new Set(ids).size !== ids.length ||
       q.opcions.some(
@@ -153,6 +192,10 @@ export function validateSurvey(s, reference = template, signals = SIGNALS) {
     }
     previous.set(q.id, q);
   }
+  if (Array.isArray(s.adaptacions) && s.adaptacions.some(a =>
+    a?.pregunta_id !== undefined &&
+    (typeof a.pregunta_id !== "string" || !previous.has(a.pregunta_id))))
+    errors.push("Cada adaptació d’una pregunta ha de citar un ID de pregunta existent.");
   for (const [i, ref] of reference.preguntes.entries())
     if (ref.de_referencia && !isDeepStrictEqual(s.preguntes[i], ref))
       errors.push(
@@ -187,6 +230,7 @@ export function validateSurvey(s, reference = template, signals = SIGNALS) {
 }
 export function normalizeAnswers(s, input = {}) {
   const result = {};
+  const hasAnswer = value => value !== undefined && value !== null && value !== "";
   const validInput = Object.fromEntries(
     s.preguntes
       .filter((q) => q.opcions.some((o) => o.id === input[q.id]))
@@ -195,16 +239,22 @@ export function normalizeAnswers(s, input = {}) {
   for (const q of s.preguntes) {
     const value = input[q.id];
     let entry;
-    if (!visible(q, validInput))
+    if (!visible(q, validInput)) {
+      const conditions = q.condicio_de_visualitzacio.totes;
+      const disproved = conditions.some(c => Object.hasOwn(validInput, c.pregunta_id) &&
+        !c.opcions_ids.includes(validInput[c.pregunta_id]));
+      const incomplete = conditions.some(c => hasAnswer(input[c.pregunta_id]) &&
+        !Object.hasOwn(validInput, c.pregunta_id));
+      const determinate = disproved || (!hasAnswer(value) && !incomplete);
       entry = {
-        estat: "no_mostrada",
-        visibilitat: "elegibilitat_reconstruida",
+        estat: determinate ? "no_mostrada" : "desconeguda",
+        visibilitat: determinate ? "elegibilitat_reconstruida" : "desconeguda",
       };
-    else if (value === undefined || value === null || value === "")
+    } else if (!hasAnswer(value))
       entry = { estat: "omesa" };
     else if (q.tipus === "text_lliure")
-      entry = Object.hasOwn(safeTexts, value)
-        ? { estat: "valid", text: value, temes: safeTexts[value] }
+      entry = isSyntheticText(value)
+        ? { estat: "valid", text: value, temes: safeTexts[value] ?? [] }
         : { estat: "descartada_privacitat" };
     else if (!q.opcions.some((o) => o.id === value))
       entry = { estat: "invalida" };
@@ -226,14 +276,21 @@ export function normalizeAnswers(s, input = {}) {
 }
 const pct = (n, d) => Math.round((n / d) * 1000) / 10;
 const protectedCount = (n) => n > 0 && n < THRESHOLD;
-const safePartition = (ns) => !ns.some(protectedCount);
+export const safePartition = (ns) => !ns.some(protectedCount);
+const answerStates = ["no_valorable", "no_us", "negativa", "omesa", "no_mostrada", "invalida", "desconeguda"];
+const stateCounts = (rows, question) => answerStates.map(estat => ({
+  estat, n: rows.filter(r => r.answers[question]?.estat === estat).length,
+}));
 export function historical(p, data = null) {
   if (!data || p.sector !== data.sector || p.ubicacio !== data.ubicacio) return {abast:'insuficient'};
   const {referencia,voluntaria}=data;
   const bases=[referencia.reduce((a,b)=>a+b,0),voluntaria.reduce((a,b)=>a+b,0)];
+  if (bases.some(n => n < THRESHOLD) || bases[1] > data.population ||
+      !safePartition([...referencia, ...voluntaria, data.population - bases[1]]))
+    return {abast:'insuficient'};
   const extremes=[referencia[0]+referencia[4],voluntaria[0]+voluntaria[4]];
   return {abast:p.torn==='Tots dos'?'exacte':'ampli',referencia,voluntaria,bases,
-    taxa:pct(bases[1],data.population),percentatges:[referencia.map(n=>pct(n,bases[0])),voluntaria.map(n=>pct(n,bases[1]))],
+    poblacio_elegible:data.population,taxa:pct(bases[1],data.population),percentatges:[referencia.map(n=>pct(n,bases[0])),voluntaria.map(n=>pct(n,bases[1]))],
     extrems:extremes.map((n,i)=>pct(n,bases[i])),diferencia:Math.round((extremes[1]/bases[1]-extremes[0]/bases[0])*1000)/10,
     periode:data.periode,pregunta:data.pregunta,origen:data.origen};
 }
@@ -273,16 +330,15 @@ export function aggregate(rows, population, survey, audience = null) {
       const counts = [1, 2, 3, 4, 5].map(
           (v) => values.filter((x) => x === v).length,
         ),
-        fav = counts[3] + counts[4];
-      const states = ["no_valorable", "omesa", "invalida"].map((state) => ({
-        estat: state,
-        n: rows.filter((r) => r.answers[q.id]?.estat === state).length,
-      }));
+        fav = favorableOptions(q).reduce((sum, option) => sum + counts[Number(option) - 1], 0);
+      const states = stateCounts(rows, q.id);
       return {
         id: q.id,
         text: q.text,
         n,
         favorable: safePartition([fav, n - fav]) ? pct(fav, n) : null,
+        favorables: safePartition([fav, n - fav]) ? fav : null,
+        opcions_favorables: favorableOptions(q),
         distribution: safePartition(counts) ? counts : null,
         absencies: safePartition(states.map((s) => s.n)) ? states : null,
       };
@@ -302,8 +358,11 @@ export function aggregate(rows, population, survey, audience = null) {
     (q) => q.tipus === "text_lliure",
   );
   const eligible = rows.filter((r) =>
-    textQuestions.some((q) => r.answers[q.id]?.estat !== "no_mostrada"),
+    textQuestions.some((q) => r.answers[q.id] &&
+      !["no_mostrada", "desconeguda"].includes(r.answers[q.id].estat)),
   );
+  const answered = eligible.filter(r => textQuestions.some(q =>
+    ["valid", "descartada_privacitat"].includes(r.answers[q.id]?.estat))).length;
   const antecedentCounts = textQuestions.flatMap((q) =>
     q.condicio_de_visualitzacio.totes.map(
       (c) =>
@@ -357,10 +416,17 @@ export function aggregate(rows, population, survey, audience = null) {
         favorable: m.favorable,
       });
   const selections = survey.preguntes.filter(q => q.tipus === "seleccio_unica").flatMap(q => {
-    const opcions = q.opcions.map(o => ({...o,n:rows.filter(r => r.answers[q.id]?.value === o.id).length}));
+    const opcions = q.opcions
+      .filter(o => !["no_us", "no_valorable", "prefereixo_no_respondre"].includes(o.id))
+      .map(o => ({...o,n:rows.filter(r => {
+        const answer = r.answers[q.id];
+        return answer?.estat === "valid" && answer.value === o.id;
+      }).length}));
     const base = opcions.reduce((n,o) => n+o.n,0);
+    const states = stateCounts(rows, q.id).filter(state => state.n > 0);
     return base >= THRESHOLD && safePartition([...opcions.map(o => o.n),total-base])
-      ? [{id:q.id,text:q.text,base,opcions}] : [];
+      ? [{id:q.id,text:q.text,base,opcions,
+        ...(states.length && safePartition(states.map(state => state.n)) ? { estats: states } : {})}] : [];
   });
   return {
     total,
@@ -395,6 +461,8 @@ export function aggregate(rows, population, survey, audience = null) {
           elegibles: eligible.length,
           visibilitat:
             "Elegibilitat reconstruïda; no és una visualització observada",
+          respostes: answered >= THRESHOLD && safePartition([eligible.length - answered, answered - texts.length, texts.length])
+            ? answered : null,
           respostes_text: textBaseSafe ? texts.length : null,
         }
       : null,
@@ -410,14 +478,25 @@ export function comparable(a, b) {
   );
 }
 export function paired(a, b, rowsA, rowsB) {
-  if (!comparable(a, b)) return { estat: "no_comparable", metrics: [] };
-  const lookup = new Map(rowsA.map((r) => [r.participant, r]));
-  const metrics = a.survey.preguntes
-    .filter((q) => q.de_referencia)
+  if (!isDeepStrictEqual(a.public, b.public) || a.protocol !== b.protocol)
+    return { estat: "no_comparable", metrics: [] };
+  const questions = a.survey.preguntes.filter((q, i) =>
+    q.de_referencia && q.tipus === "escala_1_5" && isDeepStrictEqual(q, b.survey.preguntes[i]));
+  if (!questions.length) return { estat: "no_comparable", metrics: [] };
+  const uniqueParticipants = (rows) => {
+    const lookup = new Map();
+    for (const row of rows) {
+      if (row.participant) lookup.set(row.participant, lookup.has(row.participant) ? null : row);
+    }
+    return lookup;
+  };
+  const before = uniqueParticipants(rowsA);
+  const after = uniqueParticipants(rowsB);
+  const metrics = questions
     .map((q) => {
-      const pairs = rowsB
-        .filter((r) => lookup.has(r.participant))
-        .map((r) => [lookup.get(r.participant).answers[q.id], r.answers[q.id]])
+      const pairs = [...after]
+        .filter(([participant, row]) => row && before.get(participant))
+        .map(([participant, row]) => [before.get(participant).answers[q.id], row.answers[q.id]])
         .filter((pair) =>
           pair.every((v) => v?.estat === "valid" && /^[1-5]$/.test(v.value)),
         );
@@ -429,6 +508,9 @@ export function paired(a, b, rowsA, rowsB) {
         ])
       )
         return { id: q.id, n: null, delta: null, perdues: null };
+      const transitions = { puja: 0, igual: 0, baixa: 0 };
+      for (const [x, y] of pairs)
+        transitions[Number(y.value) > Number(x.value) ? "puja" : x.value === y.value ? "igual" : "baixa"]++;
       const delta =
         pairs.reduce(
           (sum, [x, y]) => sum + Number(y.value) - Number(x.value),
@@ -438,6 +520,7 @@ export function paired(a, b, rowsA, rowsB) {
         id: q.id,
         n: pairs.length,
         delta: Math.round(delta * 100) / 100,
+        transicions: safePartition(Object.values(transitions)) ? transitions : null,
         perdues: rowsA.length - pairs.length,
       };
     });
