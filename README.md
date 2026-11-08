@@ -31,18 +31,26 @@ Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a
 
 La demo incorpora sis onades tancades de l’etapa 03. A **Campanyes** hi ha els resultats de cada onada. A **Accions i seguiment** es pot obrir cada seguiment vinculat a l’acció simulada. La càrrega afegeix només els identificadors de simulació que falten i conserva les campanyes existents.
 
+## Assaig de l’Escenari A
+
+Executa `pnpm demo:scenario-a` i obre la [portada](http://127.0.0.1:3010/). Després de la presentació, la **Visió general** s’obre sense contrasenya en aquesta demo local. Cada arrencada prepara una base en memòria amb cinc campanyes. **Nova consulta** crea la sisena, en estat d’esborrany. La generació de preguntes i l’anàlisi simulen Groq. El QR obre el formulari local i Teams mostra una simulació d’enviament.
+
+1. Obre **Nova consulta**, comprova els camps preemplenats i prem **Simular crida a Groq**. A **Consulta**, mostra el senyal històric i la pregunta breu sobre la dificultat principal. Prem **Editar preguntes manualment**, desa el canvi i aprova la versió.
+2. Prem **Publicar consulta** i mostra les opcions de **Difusió**. Obre **Campanyes** i entra a **Veure resultats** a la fila marcada com a **Resultats preparats de l’Escenari A**. Les 194 respostes són del qüestionari base de la còpia tancada. L’edició feta en directe pertany a la nova consulta.
+3. A **Resultats numèrics**, mostra la dificultat més triada i el desglossament per torn protegit. A **Anàlisi amb IA**, el mapa de temes està preparat amb 25 comentaris sintètics dels 35 casos elegibles. Escull l’acció **Resum del nou sistema de torns** per obrir el seguiment amb la pregunta sobre l’arribada del resum.
+
 ## Flux des de zero
 
-La portada obre la diapositiva de **Presentació**. Fes clic a la diapositiva o activa l’enllaç **Continuar a la visió general** per obrir el tauler. També pots tornar a la diapositiva a `/#presentation`.
+Fes clic a la portada vermella d’Escoltamm per reproduir el vídeo d’introducció en pantalla completa. Quan s’acaba, s’obre automàticament la diapositiva de **Presentació** en pantalla completa. Fes clic a la diapositiva o activa l’enllaç **Continuar a la visió general** per obrir el tauler. Si cal, l’accés de People es demana en aquest pas. També pots obrir directament la diapositiva a `/#presentation`.
 
 1. **Nova consulta:** escriu la necessitat i prem «Generar amb IA», o desa un esborrany. El nom, la decisió i el context són opcionals. Pots ajustar el públic i les exclusions.
-2. **Consulta:** inicialment no conté preguntes i no es pot aprovar. «Generar amb IA real» envia la descripció i els senyals agregats aplicables al proveïdor configurat. La calibració sintètica de setembre correspon a Planta; si es tria un sol torn, es mostra com a context del conjunt de la planta.
-3. **Revisió:** comprova i edita el títol, introducció, preguntes, opcions, ordre i condicions. Les notes de disseny associen els senyals i riscos contextuals amb les preguntes. El JSON complet també es pot editar. El servidor valida 3–6 preguntes i cada recorregut, durada estimada inferior a 120 segons i referències de condicions.
+2. **Consulta:** inicialment no conté preguntes i no es pot aprovar. «Generar amb IA» envia la descripció i els senyals agregats aplicables al proveïdor configurat. La calibració sintètica de setembre correspon a Planta; si es tria un sol torn, es mostra com a context del conjunt de la planta.
+3. **Revisió:** comprova i edita el títol, introducció, preguntes, opcions, ordre i condicions. Les notes de disseny associen els senyals i riscos contextuals amb les preguntes. El servidor valida 3–6 preguntes i cada recorregut, durada estimada inferior a 120 segons i referències de condicions.
 4. **Aprovació:** aprova la versió exacta. Una edició revoca l’aprovació. Els errors del proveïdor conserven l’esborrany; un 429 mostra l’espera indicada.
 5. **Publicació:** crea el formulari real a Typeform en mode connectat. La repetició recupera la publicació existent; un resultat remot incert exigeix reconciliació.
 6. **Difusió:** comparteix el QR de la plataforma per recollir respostes que es puguin importar. En connectat, el navegador obté un codi de seguiment de la sèrie i continua a Typeform sense credencial. El formulari local de demo continua amb credencial fictícia. La targeta de Microsoft Teams simula l’enviament a un canal de prova.
 7. **Resultats:** es calculen a partir de respostes acceptades en tancar l’onada. Les escales i seleccions utilitzen els ítems de cada consulta, sense insights sintètics inicials.
-8. **Anàlisi i seguiment:** amb Groq configurat, obre **Resultats** d’una onada tancada i prem **Generar anàlisi i accions**. El servidor prepara les fitxes publicables a partir de la instantània desada a PostgreSQL o SQLite. Revisa l’informe amb **Revisar l’informe de Groq** i selecciona una acció aprovada a **Accions** per crear el seguiment.
+8. **Anàlisi i seguiment:** amb Groq configurat, el tancament inicia l’anàlisi automàtica. Els resultats numèrics estan disponibles mentre la IA agrupa els comentaris i el servidor comprova els suports i els llindars de privacitat. A **Anàlisi amb IA**, People pot consultar el resultat i escollir una proposta per crear el seguiment.
 
 El QR directe Typeform obre el formulari per previsualitzar-lo. Per importar una resposta cal obrir-la des de la plataforma amb una referència temporal `delivery` vàlida en el moment de la tramesa. Per compartir el QR de la plataforma amb mòbils externs, configura un `PUBLIC_ORIGIN` HTTPS accessible.
 
@@ -51,7 +59,7 @@ El QR directe Typeform obre el formulari per previsualitzar-lo. Per importar una
 - Només dades sintètiques. Les credencials `DEMO-0001`–`DEMO-0600` són per Planta; els altres públics tenen 120 credencials. No s’hi han d’introduir IDs reals.
 - En connectat, la cookie de seguiment dura 30 dies i es renova en continuar a Typeform. Es permet una resposta per navegador i onada mentre es conserva el codi. Canviar de navegador o esborrar la cookie permet respondre amb un codi nou. El mateix navegador pot ser compartit. En local, la deduplicació és per credencial i onada.
 - L’app publica una instantània immutable al tancament. Bases inferiors a 10 i complements petits estan protegits. No exposa respostes individuals.
-- **Text lliure:** el prototip admet una llista tancada de frases sintètiques. People pot revisar-ne els temes i suports quan hi ha prou base i els textos encara es conserven. Els comentaris arbitraris es descarten abans de desar la resposta.
+- **Text lliure:** el prototip admet una llista tancada de frases sintètiques. L’anàlisi automàtica mostra temes agregats amb prou suport verificat. Els comentaris arbitraris es descarten abans de desar la resposta.
 - Groq rep fitxes qualitatives d’evidència publicable. El servidor adjunta les xifres i desa les revisions a `wave_analysis`. Les sis onades simulades de l’etapa 03 es mostren amb els seus KPI i seguiments.
 - Les preguntes marcades explícitament com a referència es preserven en seguiments; les noves consultes no incorporen referències prefabricades.
 - La purga local no elimina formularis/respostes del compte Typeform ni còpies externes. Neteja les proves remotes quan deixin de ser necessàries.

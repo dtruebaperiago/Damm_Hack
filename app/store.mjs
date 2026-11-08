@@ -14,6 +14,7 @@ import {
 } from "./domain.mjs";
 import { AppError } from "./providers.mjs";
 import { compareSnapshots, makeReportBase, policyFor } from "./analysis.mjs";
+import { scenarioAResultsId } from "./scenario-a.mjs";
 const now = () => Date.now();
 const json = JSON.stringify;
 const locations = {
@@ -38,6 +39,7 @@ const demoCalibration = {
 };
 const caNumber = new Intl.NumberFormat("ca-ES", { maximumFractionDigits: 1 });
 const measurement = (w) => ({ survey: w.survey, public: w.config.public, protocol: w.config.protocol });
+const analysisReport = (state) => state.approved ?? (state.automatic ? state.draft : null);
 const retention = 30 * 86400000;
 const stableFingerprint = (value) => json(JSON.parse(value), (_, item) =>
   item && typeof item === "object" && !Array.isArray(item)
@@ -411,7 +413,7 @@ export class Store {
     return (await this.earlierWaves(w)).filter(previous => previous.snapshot &&
       paired(measurement(previous), measurement(w), [], []).estat === "comparable");
   }
-  async close(id, baseline) {
+  async close(id, baseline, automaticAnalysis = false) {
     return this.tx(async () => {
       const w = await this.wave(id);
       if (w.state === "closed") return decodeJSON(w.snapshot);
@@ -459,6 +461,7 @@ export class Store {
       await this.db
         .prepare("UPDATE waves SET state='closed',snapshot=? WHERE id=?")
         .run(json(snapshot), id);
+      if (automaticAnalysis) await this.writeAnalysis(id, 0, { automatic: "pending" });
       return snapshot;
     });
   }
@@ -480,7 +483,8 @@ export class Store {
   }
   usesAnalysis(w, state) {
     return w.source !== "simulation" &&
-      (state.revision > 0 || this.settings.provider === "groq" ||
+      (state.revision > 0 || (this.settings.scenarioA && w.id === scenarioAResultsId) ||
+        this.settings.provider === "groq" ||
         (this.settings.mode !== "demo" && this.settings.provider !== "openai"));
   }
   canReviewTexts(w, snapshot) {
@@ -507,15 +511,17 @@ export class Store {
     const themes = state.themes ?? [];
     const base = state.base ?? this.reportBase(w, snapshot, themes);
     return { ...snapshot, temes: state.themes ?? (snapshot.politica_analisi ? [] : snapshot.temes),
-      evidence: base.evidencies, informe_base: base, informe: state.approved ?? null };
+      evidence: base.evidencies, informe_base: base, informe: analysisReport(state) ?? null };
   }
   async proposals(id) {
     const w = await this.wave(id);
     return this.proposalsFor(w, await this.analysis(id));
   }
   proposalsFor(w, state) {
-    if (state.approved) return state.approved.accions.map(a => ({
-      ...a, accio_id: a.id, origen: "Groq · Revisada per People",
+    const report = analysisReport(state);
+    if (report) return report.accions.map(a => ({
+      ...a, accio_id: a.id,
+      origen: `${report.model === "groq-simulat" ? "IA simulada" : "Anàlisi amb IA"}${state.approved ? " · Revisada per People" : ""}`,
       evidencia: state.base.evidencies.filter(e => a.evidencia_ids.includes(e.id)),
       diagnostic: state.base.diagnostic_biaixos.filter(d => a.diagnostic_ids.includes(d.id)),
     }));
@@ -672,9 +678,10 @@ export class Store {
           .map(wave => ({ id: wave.id, titol: wave.config.titol }))
         : [],
       analysis: w.state === "closed" && this.usesAnalysis(w, state) ? {
-        tema: state.themes ? "revisat" : state.draft ? "tancat" : !this.canReviewTexts(w, results) ? "indisponible" :
-          state.themeDraft ? "pendent" : "disponible",
-        informe: state.approved ? "revisat" : state.draft ? "pendent" : "disponible",
+        ...(state.automatic ? { automatic: state.automatic } : {}),
+        tema: state.themes ? "revisat" : !this.canReviewTexts(w, results) ? "indisponible" :
+          state.draft ? "tancat" : state.themeDraft ? "pendent" : "disponible",
+        informe: state.approved ? "revisat" : state.draft ? (state.automatic ? "generat" : "pendent") : "disponible",
       } : null,
       selected_action: w.selected_action ? decodeJSON(w.selected_action) : null,
       followup: child?.id || null,

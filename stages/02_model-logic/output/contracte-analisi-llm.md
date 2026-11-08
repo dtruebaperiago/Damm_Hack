@@ -104,10 +104,10 @@ Per al primer tall, un **flux fix al servidor** fa d’orquestrador. El motor an
 | --- | --- | --- |
 | 1. Importar | `importar_typeform` | Localitza la versió publicada amb l’ID del formulari, tradueix les referències externes a IDs interns i deduplica per `(formulari, response_id)`. Un formulari o una versió desconeguts bloquegen l’import corresponent. Descarta metadades alienes al cas i registra l’origen. |
 | 2. Normalitzar i depurar | `normalitzar_respostes`, `depurar_text` | Aplica opcions i salts aprovats. Separa vàlid, no valorable, no aplicable o no ús, negativa, omès, no mostrat, invàlid i desconegut. Retira noms, contactes i detalls singulars del text o descarta el comentari si hi ha dubte. Conserva la part tancada vàlida. |
-| 3. Calcular i descobrir temes | `calcular_agregats`, `descobrir_temes`, `verificar_suport` | El codi calcula distribucions, bases, cobertura i comparabilitat. L’agent proposa temes emergents a partir dels textos depurats i l’enunciat. El servidor comprova les referències i els fragments literals. Una persona revisora confirma el significat de cada suport comptat. Si el bloc temàtic queda pendent o falla, es manté l’anàlisi tancada. |
+| 3. Calcular i descobrir temes | `calcular_agregats`, `descobrir_temes`, `verificar_suport` | En tancar la recollida, el servidor calcula distribucions, bases, cobertura i comparabilitat. El model proposa temes dels textos depurats i contrasta cada suport amb el text complet. El servidor valida referències, fragments i complements abans de mostrar els agregats temàtics. |
 | 4. Protegir i contextualitzar | `preparar_evidencia` | Aplica el llindar `n ≥ 10` i la supressió complementària del model lògic a mètriques, talls, comparacions i actualitzacions. Per a un tema, exigeix també deu trameses diferents que el mencionin. Selecciona el diagnòstic pertinent i congela la instantània publicable. |
 | 5. Interpretar i proposar | `aplicar_regles`, `sintetitzar_amb_llm`, `validar_propostes` | El servidor aplica la política d’anàlisi. El LLM proposa interpretacions i accions amb evidència publicable. Cada bloc generat passa una comprovació de referències i una revisió del significat. [Protocol del pas 5](protocol-interpretacio-llm.md) |
-| 6. Validar i mostrar | `validar_informe`, `renderitzar_informe` | El servidor valida les referències i insereix xifres, bases, períodes i avisos de la instantània. RRHH veu els agregats i els blocs aprovats. Si la revisió està pendent, el bloc generat queda fora de la vista de resultats. |
+| 6. Validar i mostrar | `validar_informe`, `renderitzar_informe` | El servidor valida les referències i insereix xifres, bases, períodes i avisos de la instantània. RRHH pot consultar els resultats numèrics mentre es prepara l’anàlisi amb IA. En completar-se, la interpretació i les propostes apareixen en una secció pròpia. |
 | 7. Seleccionar i seguir | `seleccionar_accio`, `obrir_seguiment` | Quan RRHH confirma, el servidor desa l’acció i l’evidència exactes. Crea o recupera l’esborrany associat, conserva públic i preguntes de referència de la versió publicada i passa la pregunta adaptable al generador de microconsultes. RRHH revisa el nou formulari abans de publicar. |
 
 **Regles de càlcul del pas 3**
@@ -158,14 +158,18 @@ El servidor munta les troballes i propostes i hi afegeix les xifres, la base, el
   "troballes": [
     {
       "id": "t_comprensio",
-      "text": "L’acord amb l’ítem de comprensió queda dins del rang que RRHH ha fixat per revisar la comunicació.",
+      "text": "La comprensió declarada indica que convé revisar com s’explica la rotació.",
+      "hipotesi": "Un exemple pràctic podria aclarir el pas d’un torn a l’altre.",
+      "comprovacio": "Torna a mesurar la comprensió després de compartir l’exemple.",
       "evidencia_ids": ["e_q1"],
       "limitacio": "L’ítem recull comprensió percebuda entre les trameses que han donat una resposta vàlida."
     },
     {
       "id": "t_instruccions",
-      "text": "Entre els comentaris analitzables de la repregunta apareixen dificultats per trobar instruccions en un sol lloc.",
-      "evidencia_ids": ["e_q4_instruccions"],
+      "text": "Els comentaris concreten un possible obstacle a la comprensió en la dispersió de les instruccions.",
+      "hipotesi": "Un resum compartit als dos torns podria facilitar la comprensió.",
+      "comprovacio": "Pregunta si el resum ha arribat i mesura de nou la comprensió.",
+      "evidencia_ids": ["e_q1", "e_q4_instruccions"],
       "limitacio": "La repregunta és opcional i només s’activa en un recorregut concret."
     }
   ],
@@ -180,6 +184,8 @@ El servidor munta les troballes i propostes i hi afegeix les xifres, la base, el
       "id": "a_resum_torns",
       "tipus": "canvi",
       "titol": "Centralitzar les instruccions del nou sistema de torns",
+      "objectiu": "Facilitar que la plantilla entengui com funciona la rotació.",
+      "justificacio": "Els comentaris descriuen instruccions repartides. Una sola guia permet consultar la mateixa pauta en tots dos torns.",
       "troballa_ids": ["t_comprensio", "t_instruccions"],
       "diagnostic_ids": [],
       "rol_suggerit": "Supervisió de Planta",
@@ -189,6 +195,8 @@ El servidor munta les troballes i propostes i hi afegeix les xifres, la base, el
         "quan": "Una setmana després de difondre la guia",
         "pregunta_adaptable": "Durant els darrers set dies, has pogut trobar les instruccions del nou sistema de torns quan les has necessitat?",
         "opcions_suggerides": ["Sí", "No", "No les he necessitat", "Prefereixo no respondre"],
+        "pregunta_impacte_id": "comprensio",
+        "criteri_impacte": "Compara la proporció favorable de comprensió si les onades són comparables. Si la guia és accessible i la comprensió no puja, revisa l’exemple de rotació.",
         "preguntes_referencia_ids": ["comprensio", "suport"]
       }
     }
@@ -196,7 +204,11 @@ El servidor munta les troballes i propostes i hi afegeix les xifres, la base, el
 }
 ```
 
-El validador exigeix IDs existents de la instantània vigent per a la vista. Cada troballa sobre l’onada ha de tenir evidència actual, i cada acció ha de referenciar troballes o diagnòstics pertinents segons el tipus `canvi` o `recollida`. El servidor rebutja camps inesperats, cites a resultats suprimits i accions de canvi que només citin l’històric. Una persona revisora confirma que el significat i l’abast del bloc coincideixen amb l’evidència abans d’incorporar-lo a l’informe.
+El validador exigeix IDs existents de la instantània vigent per a la vista. Cada troballa sobre l’onada ha de tenir evidència actual, i cada acció ha de referenciar troballes o diagnòstics pertinents segons el tipus `canvi` o `recollida`. El servidor rebutja camps inesperats, cites a resultats suprimits i accions de canvi que només citin l’històric. RRHH consulta les propostes i confirma l’acció que vol convertir en un seguiment.
+
+Cada troballa formula una hipòtesi i una manera de comprovar-la. Pot citar una fitxa o un parell autoritzat. Els resultats globals de preguntes diferents es poden contrastar com a agregats. Les fitxes d’una repregunta opcional es poden llegir amb la pregunta que condiciona la branca. Aquests parells no calculen associacions entre persones.
+
+Cada proposta formula un objectiu i explica per què el canvi podria ajudar a assolir-lo a partir de l’evidència citada. El pla indica qui pot aplicar l’acció, quan i amb quin primer pas. Separa la pregunta nova sobre l’arribada o l’ús de l’acció del criteri per valorar el resultat. L’ID de la pregunta d’impacte ha de correspondre a una pregunta fixa amb una proporció favorable publicable a l’onada de partida. Si no hi ha cap indicador comparable pertinent, l’ID és nul i el criteri indica una altra mesura. L’evolució entre onades es pot llegir quan les mostres són comparables.
 
 ### Exemple de targeta a la pantalla
 

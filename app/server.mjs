@@ -20,6 +20,7 @@ import {
   validateSynthesis, validateThemes,
 } from "./analysis.mjs";
 import { loadSimulation } from "./simulation.mjs";
+import { scenarioAAnalysis, scenarioADefaults, scenarioAResultsId, scenarioASurvey, seedScenarioA } from "./scenario-a.mjs";
 import { template } from "./domain.mjs";
 import {
   AppError,
@@ -29,6 +30,29 @@ import {
   llmJSON,
 } from "./providers.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+function sendIntroVideo(req, res) {
+  const video = readFileSync(resolve(root, "public", "presentacio-intro.mp4"));
+  const length = video.length;
+  res.setHeader("Accept-Ranges", "bytes");
+  res.setHeader("Content-Type", "video/mp4");
+  let start = 0;
+  let end = length - 1;
+  if (req.headers.range && req.method === "GET") {
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
+    if (range && (range[1] || range[2])) {
+      start = range[1] ? Number(range[1]) : Math.max(0, length - Number(range[2]));
+      if (range[1] && range[2]) end = Math.min(end, Number(range[2]));
+      if (start > end) {
+        res.writeHead(416, { "Content-Range": `bytes */${length}` });
+        return res.end();
+      }
+      res.statusCode = 206;
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${length}`);
+    }
+  }
+  res.setHeader("Content-Length", end - start + 1);
+  res.end(req.method === "HEAD" ? undefined : video.subarray(start, end + 1));
+}
 const cookieValue = (req, key) => {
   const pair = (req.headers.cookie || "")
     .split(";")
@@ -37,8 +61,17 @@ const cookieValue = (req, key) => {
   return pair?.slice(key.length + 1) || "";
 };
 export async function createApplication(config) {
+  if (config.scenarioA) config = {
+    scenarioA: true,
+    dbPath: ":memory:",
+    mode: "demo",
+    origin: config.origin,
+    adminPassword: "equip-damm",
+    secret: randomBytes(48).toString("hex"),
+  };
   const store = await new Store(config.dbPath, config).init();
   if (config.loadSimulation) await loadSimulation(store);
+  if (config.scenarioA) await seedScenarioA(store);
   const groqReady = config.provider === "groq" && !!config.groqKey && !!config.model;
   const processing = new Set();
   const withGroq = async (id, work) => {
@@ -51,12 +84,68 @@ export async function createApplication(config) {
       processing.delete(id);
     }
   };
+  const discoverThemes = async (input) => {
+    const { textos, ...context } = input;
+    const data = await llmJSON("theme_discovery", {
+      ...context, textos: textos.map(({ resposta_ref, text }) => ({ resposta_ref, text })),
+    }, config);
+    return contrastThemes(validateThemes(data, input), vincles =>
+      llmJSON("theme_contrast", { enunciat: input.enunciat, vincles }, config));
+  };
+  const runAutomaticAnalysis = async (w) => {
+    if (!groqReady || w.state !== "closed" || !w.snapshot) return;
+    const { revision, ...state } = await store.analysis(w.id);
+    // A later request can reclaim a run interrupted before it wrote its result.
+    const stale = state.automatic === "running" && Date.now() - state.startedAt > 5 * 60_000;
+    if (state.automatic !== "pending" && !stale) return;
+    try {
+      await store.writeAnalysis(w.id, revision, { ...state, automatic: "running", startedAt: Date.now() });
+    } catch (error) {
+      if (error instanceof AppError && error.status === 409) return;
+      throw error;
+    }
+    const snapshot = decodeJSON(w.snapshot);
+    delete state.startedAt;
+    state.automatic = "complete";
+    try {
+      if (!state.themes && store.canReviewTexts(w, snapshot)) {
+        const input = themeInput(w, snapshot, await store.rows(w.id));
+        if (input) {
+          const candidates = await discoverThemes(input);
+          if (store.canReviewTexts(w, snapshot) && themeInput(w, snapshot, await store.rows(w.id))) {
+            const supported = candidates.map(({ id, vincles }) => ({ id,
+              refs: vincles.filter(v => v.estat === "dona_suport").map(v => v.resposta_ref),
+            })).filter(t => t.refs.length);
+            state.themes = reviewThemes({ base: snapshot.textos, temes: candidates }, supported);
+          }
+        }
+      }
+      const base = store.reportBase(w, snapshot, state.themes ?? []);
+      if (base.evidencies.length || base.diagnostic_biaixos.length) {
+        const data = await llmJSON("analysis", synthesisInput(w, base), config);
+        state.base = base;
+        state.draft = { ...validateSynthesis(data, base, w.survey), instantania_id: base.instantania_id,
+          model: config.model, instruccions: analysisVersions.instruccions };
+      }
+    } catch {
+      state.automatic = "failed";
+    }
+    await store.writeAnalysis(w.id, revision + 1, state);
+  };
+  const startAutomaticAnalysis = (w) => {
+    runAutomaticAnalysis(w).catch(() => console.error("No s’ha pogut desar l’anàlisi automàtica."));
+  };
   const passwordSalt = randomBytes(16),
     passwordHash = scryptSync(config.adminPassword, passwordSalt, 32);
-  const secure = new URL(config.origin).protocol === "https:";
+  const publicOrigin = new URL(config.origin);
+  const secure = publicOrigin.protocol === "https:";
+  const passwordlessDemo = (req) => config.scenarioA &&
+    publicOrigin.hostname === "127.0.0.1" && req.socket.remoteAddress === "127.0.0.1" &&
+    req.headers.host === publicOrigin.host;
   const cookie = (name, value, maxAge, path = "/") =>
     `${name}=${value}; Path=${path}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
   const auth = async (req) => {
+    if (passwordlessDemo(req)) return;
     const token = cookieValue(req, "ea_admin");
     if (
       !token ||
@@ -96,6 +185,8 @@ export async function createApplication(config) {
     try {
       const url = new URL(req.url, config.origin),
         path = url.pathname;
+      if (path === "/presentacio-intro.mp4" && (req.method === "GET" || req.method === "HEAD"))
+        return sendIntroVideo(req, res);
       if (req.method === "GET" && path === "/api/health")
         return send(200, { ok: true, mode: config.mode });
       const webhook = path === "/api/webhooks/typeform";
@@ -170,14 +261,18 @@ export async function createApplication(config) {
         return send(200, {
           authenticated,
           mode: config.mode,
+          ...(passwordlessDemo(req) ? { passwordless: true } : {}),
+          ...(config.scenarioA && authenticated ? {
+            scenario_a: { defaults: scenarioADefaults, results_id: scenarioAResultsId },
+          } : {}),
           integrations: {
             typeform: !!config.typeformToken,
-            analysis: groqReady,
+            analysis: groqReady || !!config.scenarioA,
             llm:
-              !!(config.provider === "groq"
+              !!config.scenarioA || (!!(config.provider === "groq"
                 ? config.groqKey
-                : config.openaiKey) && !!config.model,
-            provider: config.provider || "openai",
+                : config.openaiKey) && !!config.model),
+            provider: config.scenarioA ? "groq-simulat" : config.provider || "openai",
           },
           catalog: {
             Planta: "Planta de demo",
@@ -322,19 +417,22 @@ export async function createApplication(config) {
           return send(201, await store.waveDTO(w.id));
         }
         const match = path.match(
-          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|analysis-review|themes|theme-review|followup|qr|typeform-qr|webhook|export))?$/,
+          /^\/api\/campaigns\/([a-zA-Z0-9-]+)(?:\/(edit|approve|publish|reconcile|import|close|generate|proposals|analysis-review|analysis-retry|themes|theme-review|followup|qr|typeform-qr|webhook|export))?$/,
         );
         if (!match) throw new AppError("Ruta no trobada.", 404);
         const [, id, action] = match;
         let w = await store.wave(id);
-        if (!action && req.method === "GET")
+        const simulatedAnalysis = config.scenarioA && id === scenarioAResultsId;
+        if (!action && req.method === "GET") {
+          startAutomaticAnalysis(w);
           return send(200, await store.waveDTO(id));
+        }
         if (req.method === "GET" && ["analysis-review", "theme-review"].includes(action)) {
-          const { revision, themeDraft, themes, draft, approved, base } = await store.analysis(id);
+          const { revision, automatic, themeDraft, themes, draft, approved, base } = await store.analysis(id);
           if (action === "theme-review" && themeDraft && !themes && !draft &&
               w.snapshot && store.canReviewTexts(w, decodeJSON(w.snapshot)))
             return send(200, { revision, ...themeDraft });
-          if (action === "analysis-review" && draft && !approved)
+          if (action === "analysis-review" && draft && !approved && !automatic)
             return send(200, { revision, base, draft });
           throw new AppError("No hi ha cap esborrany pendent de revisió.", 404);
         }
@@ -393,24 +491,26 @@ export async function createApplication(config) {
             throw new AppError("Només es pot generar sobre un esborrany.", 409);
           const calibration = await store.calibration(w.config.public);
           const sondeig = store.diagnostic(w.config.public, calibration);
-          const survey = await generateSurvey(
-            {
-              objectiu: w.config.objectiu,
-              decisio_rrhh: w.config.decisio,
-              conceptes: w.config.conceptes,
-              context: w.config.context,
-              public: w.config.public,
-              sondeig,
-              ...(w.config.seguiment_accio ? { seguiment_accio: w.config.seguiment_accio } : {}),
-              restriccions: {
-                temes_exclosos: w.config.exclusions,
-                tractament:
-                  "Pseudonimitzat i relacionable entre onades del cicle. RRHH només veu agregats.",
+          const survey = config.scenarioA
+            ? scenarioASurvey(sondeig, w.parent_id ? w.survey : null)
+            : await generateSurvey(
+              {
+                objectiu: w.config.objectiu,
+                decisio_rrhh: w.config.decisio,
+                conceptes: w.config.conceptes,
+                context: w.config.context,
+                public: w.config.public,
+                sondeig,
+                ...(w.config.seguiment_accio ? { seguiment_accio: w.config.seguiment_accio } : {}),
+                restriccions: {
+                  temes_exclosos: w.config.exclusions,
+                  tractament:
+                    "Pseudonimitzat i relacionable entre onades del cicle. RRHH només veu agregats.",
+                },
               },
-            },
-            config,
-            w.parent_id ? (await store.wave(w.parent_id)).survey : template,
-          );
+              config,
+              w.parent_id ? (await store.wave(w.parent_id)).survey : template,
+            );
           await store.edit(id, w.version, survey, undefined, {
             public: w.config.public,
             sondeig,
@@ -523,8 +623,17 @@ export async function createApplication(config) {
             items = await client.responses(w.form_id);
           for (const item of items)
             await importTypeformResponse(store, w, item, definition);
-        } else if (action === "close") await store.close(id, body.referencia_id);
-        else if (action === "proposals" && config.provider !== "groq" && !(await store.analysis(id)).revision) {
+        } else if (action === "close") {
+          await store.close(id, body.referencia_id, groqReady);
+          startAutomaticAnalysis(await store.wave(id));
+        } else if (action === "analysis-retry") {
+          const { revision, ...state } = await store.analysis(id);
+          if (!groqReady || state.automatic !== "failed")
+            throw new AppError("No hi ha cap anàlisi automàtica pendent de reintentar.", 409);
+          await store.writeAnalysis(id, revision, { ...state, automatic: "pending" });
+          startAutomaticAnalysis(w);
+        }
+        else if (action === "proposals" && !simulatedAnalysis && config.provider !== "groq" && !(await store.analysis(id)).revision) {
           const evidence = decodeJSON(w.snapshot)?.evidence ?? [];
           if (!evidence.length)
             throw new AppError(
@@ -544,7 +653,8 @@ export async function createApplication(config) {
             throw new AppError("Tanca la recollida abans d’analitzar l’onada.", 409);
           const snapshot = decodeJSON(w.snapshot);
           const { revision, ...state } = await store.analysis(id);
-          const metadata = { model: config.model, instruccions: analysisVersions.instruccions };
+          if (state.automatic) throw new AppError("Aquesta onada utilitza l’anàlisi automàtica.", 409);
+          const metadata = { model: simulatedAnalysis ? "groq-simulat" : config.model, instruccions: analysisVersions.instruccions };
           if (action === "themes" && !state.themeDraft) {
             if (state.draft || state.themes) throw new AppError("La revisió de temes ja està tancada.", 409);
             await withGroq(id, async () => {
@@ -552,12 +662,7 @@ export async function createApplication(config) {
                 throw new AppError("Els textos de l’onada no estan disponibles.", 409);
               const input = themeInput(w, snapshot, await store.rows(id));
               if (!input) throw new AppError("No hi ha prou textos sintètics depurats disponibles.");
-              const { textos, ...context } = input;
-              const data = await llmJSON("theme_discovery", {
-                ...context, textos: textos.map(({ resposta_ref, text }) => ({ resposta_ref, text })),
-              }, config);
-              const temes = await contrastThemes(validateThemes(data, input), vincles =>
-                llmJSON("theme_contrast", { enunciat: input.enunciat, vincles }, config));
+              const temes = await discoverThemes(input);
               await store.tx(async () => {
                 const current = await store.wave(id);
                 if (!store.canReviewTexts(current, snapshot) ||
@@ -585,11 +690,13 @@ export async function createApplication(config) {
             const base = store.reportBase(w, snapshot, state.themes ?? []);
             if (!base.evidencies.length && !base.diagnostic_biaixos.length)
               throw new AppError("Dades insuficients per elaborar l’anàlisi.");
-            await withGroq(id, async () => {
-              const data = await llmJSON("analysis", synthesisInput(w, base), config);
+            const generate = async () => {
+              const data = simulatedAnalysis ? scenarioAAnalysis : await llmJSON("analysis", synthesisInput(w, base), config);
               const draft = validateSynthesis(data, base, w.survey);
               await store.writeAnalysis(id, revision, { ...state, base, draft: { ...draft, ...metadata } });
-            });
+            };
+            if (simulatedAnalysis) await generate();
+            else await withGroq(id, generate);
           }
           if (action === "analysis-review") {
             if (!state.draft || state.approved || body.revision !== revision)

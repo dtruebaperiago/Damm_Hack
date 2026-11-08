@@ -25,7 +25,7 @@ test("analysis evaluates the published rule on exact counts and respects suppres
 });
 
 for (const database of ["SQLite", "PostgreSQL"]) {
-  test(`${database}: Typeform responses drive the reviewed report`, async (t) => {
+  test(`${database}: closing Typeform collection starts the report and theme analysis`, async (t) => {
     const origin = "http://127.0.0.1:3913";
     const webhookSecret = "synthetic-typeform-signing-secret";
     const password = "synthetic-people-password";
@@ -51,6 +51,7 @@ for (const database of ["SQLite", "PostgreSQL"]) {
     const originalFetch = globalThis.fetch;
     let providerCalls = 0;
     let typeformItems = [];
+    const syntheticText = "Entre el tauler i el full de torn hi ha instruccions diferents.";
     t.mock.method(globalThis, "fetch", async (input, options) => {
       if (typeof input === "string" && input.startsWith("https://api.typeform.com/forms/")) {
         return Response.json(input.includes("/responses?") ? { items: typeformItems } : { fields: [] });
@@ -60,16 +61,28 @@ for (const database of ["SQLite", "PostgreSQL"]) {
       providerCalls++;
       const { messages } = JSON.parse(options.body);
       const payload = JSON.parse(messages[1].content);
-      assert.ok(payload.evidencies.some(e => e.id === "metric_comprensio"));
       assert.doesNotMatch(messages[1].content, /private-comment|remote-response|external_id|participant|delivery/);
-      const content = {
-        troballes: [{
-          text: "La proporció favorable s’ha calculat sobre les respostes vàlides.",
-          evidencia_ids: ["metric_comprensio"],
-          limitacio: "La mostra descriu les persones que han respost.",
-        }],
-        accions: [],
-      };
+      let content;
+      if (payload.textos) {
+        assert.deepEqual(payload.textos.map(text => text.text), [syntheticText]);
+        content = { temes: [{ titol: "Instruccions disperses", definicio: "Les indicacions varien segons el canal.",
+          vincles: [{ resposta_ref: payload.textos[0].resposta_ref, fragment_literal: syntheticText, observacio: "Suport directe." }],
+        }] };
+      } else if (payload.vincles) {
+        content = { veredictes: payload.vincles.map(({ id }) => ({ id, estat: "dona_suport" })) };
+      } else {
+        assert.ok(payload.evidencies.some(e => e.id === "metric_comprensio"));
+        const theme = payload.evidencies.find(e => e.tipus === "tema");
+        assert.ok(theme);
+        const ids = ["seleccio_dificultat_principal", theme.id];
+        assert.ok(payload.creuaments_troballes.some(link => link.tipus === "branca" &&
+          ids.every(id => link.evidencia_ids.includes(id))));
+        const insight = { text: "Els comentaris apunten a les instruccions disperses com un obstacle concret.",
+          hipotesi: "Una guia comuna podria aclarir la rotació.",
+          comprovacio: "Mesura la comprensió després de compartir la guia.",
+          evidencia_ids: ids, limitacio: "Només descriu els comentaris de la branca opcional." };
+        content = { troballes: [insight, { ...insight, evidencia_ids: ["metric_suport", theme.id] }], accions: [] };
+      }
       return Response.json({ choices: [{ message: { content: JSON.stringify(content) } }] });
     });
     let cookie;
@@ -102,8 +115,8 @@ for (const database of ["SQLite", "PostgreSQL"]) {
             answers: [
               { field: { ref: "comprensio" }, choice: { ref: `comprensio__${value}` } },
               { field: { ref: "suport" }, choice: { ref: `suport__${value}` } },
-              { field: { ref: "dificultat_principal" }, choice: { ref: "dificultat_principal__cap" } },
-              { field: { ref: "aclariment_comprensio" }, text: "private-comment" },
+              { field: { ref: "dificultat_principal" }, choice: { ref: `dificultat_principal__${value === 1 ? "funcionament" : "cap"}` } },
+              { field: { ref: "aclariment_comprensio" }, text: value === 1 ? syntheticText : "private-comment" },
             ],
           },
         });
@@ -124,25 +137,32 @@ for (const database of ["SQLite", "PostgreSQL"]) {
       return { id: w.id, path };
     }
 
+    async function waitForAnalysis(id) {
+      for (let i = 0; i < 200; i++) {
+        const state = await store.analysis(id);
+        if (["complete", "failed"].includes(state.automatic)) return state;
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      assert.fail("Closing did not start analysis");
+    }
     const small = await collect(9);
-    assert.equal((await request(small.path + "/proposals", {})).status, 422);
-    const wave = await collect(24);
+    assert.equal((await waitForAnalysis(small.id)).automatic, "complete");
     assert.equal(providerCalls, 0);
-    assert.equal((await request(wave.path + "/proposals", {})).status, 200);
-    const pending = await (await request(wave.path + "/analysis-review")).json();
-    const reportId = pending.base.instantania_id;
-    assert.equal(pending.base.evidencies.find(e => e.id === "metric_comprensio").base, 24);
-    assert.equal((await (await request(wave.path + "/export")).json()).resultats.informe, null);
-    const review = {
-      revision: pending.revision, troballes: [pending.draft.troballes[0].id], accions: [],
-    };
-    assert.equal((await request(wave.path + "/analysis-review", review)).status, 200);
-    assert.equal((await request(wave.path + "/analysis-review", review)).status, 409);
+    const wave = await collect(24);
+    const finished = await waitForAnalysis(wave.id);
+    assert.equal(finished.automatic, "complete");
+    const reportId = finished.base.instantania_id;
+    assert.equal(finished.base.evidencies.find(e => e.id === "metric_comprensio").base, 24);
+    assert.equal((await request(wave.path + "/analysis-review")).status, 404);
     const exported = await (await request(wave.path + "/export")).json();
     assert.equal(exported.resultats.informe.instantania_id, reportId);
     assert.equal(exported.resultats.informe.troballes.length, 1);
+    assert.equal(exported.resultats.informe.troballes[0].evidencia_ids.length, 2);
+    assert.ok(exported.resultats.informe.troballes[0].comprovacio);
+    assert.deepEqual(exported.resultats.temes.map(t => [t.titol, t.n, t.base]), [["Instruccions disperses", 12, 12]]);
     assert.doesNotMatch(JSON.stringify(exported), /private-comment|remote-response|external_id|participant|delivery/);
-    assert.equal(providerCalls, 1);
+    assert.ok(!JSON.stringify(exported).includes(syntheticText));
+    assert.equal(providerCalls, 3);
 
     const { revision, ...state } = await store.analysis(wave.id);
     await store.writeAnalysis(wave.id, revision, { ...state, themeReview: [{ id: "restricted" }] });
@@ -153,7 +173,7 @@ for (const database of ["SQLite", "PostgreSQL"]) {
     assert.equal((await store.rows(wave.id)).length, 0);
     const retained = await store.analysis(wave.id);
     assert.equal(retained.themeReview, undefined);
-    assert.equal(retained.approved.instantania_id, reportId);
+    assert.equal(retained.draft.instantania_id, reportId);
   });
 }
 
@@ -196,13 +216,18 @@ test("Groq drafts stay private until review, validated actions retain exact evid
       const themeId = input.evidencies.find(e => e.tipus === "tema").id;
       content = {
         troballes: invalidAction ? [] : [{ text: "Alguns comentaris descriuen instruccions disperses.", evidencia_ids: [themeId],
+          hipotesi: "Unificar les instruccions podria facilitar-ne l’accés.",
+          comprovacio: "Pregunta si les han trobat després de publicar la guia.",
           limitacio: "Es tracta dels textos analitzables de la repregunta." }],
         accions: [{
           tipus: "canvi", titol: "Centralitzar les instruccions", evidencia_ids: invalidAction ? [] : [themeId],
+          objectiu: "Facilitar la comprensió de la rotació.",
+          justificacio: "Les instruccions disperses poden fer difícil saber quina versió cal seguir.",
           diagnostic_ids: invalidAction ? ["historic_extrems"] : [], rol_suggerit: "Supervisió de Planta",
           primer_pas: "Publicar una guia comuna", quan: "La setmana vinent",
           seguiment: { quan: "Una setmana després", pregunta_adaptable: "Has trobat les instruccions quan les has necessitat?",
-            opcions_suggerides: ["Sí", "No", "No les he necessitat"] },
+            opcions_suggerides: ["Sí", "No", "No les he necessitat"], pregunta_impacte_id: "comprensio",
+            criteri_impacte: "Compara la comprensió amb l’onada de partida si les mostres són comparables." },
         }],
       };
     }
@@ -253,6 +278,8 @@ test("Groq drafts stay private until review, validated actions retain exact evid
   const repeatedChild = await (await request(path + "/followup", { action })).json();
   assert.equal(child.created_followup, repeatedChild.created_followup);
   assert.equal(child.selected_action.instantania_id, review.base.instantania_id);
+  assert.equal(child.selected_action.objectiu, approved.proposals[0].objectiu);
+  assert.equal(child.selected_action.seguiment.pregunta_impacte_id, "comprensio");
   const followup = await (await request("/api/campaigns/" + child.created_followup)).json();
   assert.deepEqual(followup.survey.preguntes.slice(0, 2), template.preguntes.slice(0, 2));
   assert.equal(followup.survey.preguntes.at(-1).text, approved.proposals[0].seguiment.pregunta_adaptable);

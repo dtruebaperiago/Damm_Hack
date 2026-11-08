@@ -60,7 +60,39 @@ test("optional demo seeding is awaited, keeps blank-canvas defaults and publishe
 
 import { loadSimulation } from "../app/simulation.mjs";
 import { createApplication } from "../app/server.mjs";
+import { scenarioADefaults, scenarioAResultsId } from "../app/scenario-a.mjs";
 import { PGlite } from "@electric-sql/pglite";
+
+test("Scenario A starts with five prepared campaigns and protects its small shift segment", async () => {
+  const { store } = await createApplication({
+    scenarioA: true,
+    origin: "http://127.0.0.1:3010",
+    mode: "connected",
+    loadSimulation: true,
+  });
+  try {
+    assert.equal((await store.list()).length, 5);
+    await store.createWave(scenarioADefaults);
+    assert.deepEqual((await store.list()).map(w => w.state).sort(),
+      ["approved", "closed", "draft", "published", "publishing", "uncertain"]);
+    const { results, analysis } = await store.waveDTO(scenarioAResultsId);
+    assert.equal(results.total, 194);
+    assert.deepEqual(results.torns.map(t => [t.n, t.pes_mostra, t.diferencia]),
+      [[null, null, null], [null, null, null]]);
+    const difficulty = results.seleccions.find(q => q.id === "dificultat_principal");
+    assert.equal(difficulty.base, 181);
+    assert.equal(difficulty.opcions.find(o => o.id === "funcionament").n, 68);
+    assert.deepEqual(analysis, { tema: "revisat", informe: "generat", automatic: "complete" });
+    assert.ok(results.informe.troballes.some(t => t.evidencia_ids.includes(results.temes[0].id)));
+    assert.equal(results.branca.elegibles, 35);
+    assert.equal(results.textos, 25);
+    assert.deepEqual(results.temes.map(t => [t.titol, t.n, t.base]),
+      [["Instruccions disperses", 15, 25], ["Exemples de la rotació", 10, 25]]);
+    assert.equal(results.informe_base.evidencies.filter(e => e.tipus === "tema").length, 2);
+    assert.deepEqual(await store.rows(scenarioAResultsId), []);
+  } finally { await store.db.close(); }
+});
+
 test("stage 03 simulation loads six waves asynchronously and preserves existing campaigns", async () => {
   const store = await new Store(":memory:", { mode: "demo", secret: "simulation-test" }).init();
   try {

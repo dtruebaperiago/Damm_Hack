@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { favorableOptions, isSyntheticText, safePartition, THRESHOLD } from "./domain.mjs";
 import { AppError } from "./providers.mjs";
 
-export const analysisVersions = { motor: 1, plantilles: 1, instruccions: 2 };
+export const analysisVersions = { motor: 1, plantilles: 1, instruccions: 4 };
 const invalid = () => new AppError("La IA ha retornat contingut sense suport publicable vàlid.", 502);
 const validText = (value, max = 600) =>
   typeof value === "string" && Boolean(value.trim()) && value.length <= max;
@@ -99,11 +99,26 @@ export function makeReportBase(w, snapshot, historic, themes, fingerprint) {
     evidence.filter(e => policy.relacions.some(([base, branch]) =>
       e.pregunta_id === base && theme.pregunta_id === branch && e.tipus === "escala_1_5"))
       .map(e => [e.id, theme.id]));
+  const measures = evidence.filter(e => ["escala_1_5", "seleccio_unica"].includes(e.tipus));
+  const findingLinks = measures.flatMap((measure, index) => [
+    ...measures.slice(index + 1).map(other => ({
+      evidencia_ids: [measure.id, other.id], tipus: "agregats",
+      ...(measure.favorable != null && other.favorable != null ? {
+        proporcio_favorable_mes_alta: measure.favorable === other.favorable ? null
+          : measure.favorable > other.favorable ? measure.id : other.id,
+      } : {}),
+    })),
+    ...evidence.filter(e => e.tipus === "tema" && policy.relacions.some(([parent, branch]) =>
+      measure.pregunta_id === parent && e.pregunta_id === branch)).map(theme => ({
+      evidencia_ids: [measure.id, theme.id], tipus: "branca",
+    })),
+  ]);
   const report = {
     versio_contracte: 1, campanya_id: w.id, versio_formulari: w.version,
     onada: w.parent_id ? "seguiment" : "inicial", politica: policy, ...analysisVersions,
     ...context, mostra: { trameses_valides: snapshot.total, taxa_aparent: snapshot.taxa },
     evidencies: evidence, diagnostic_biaixos: historic, relacions_permeses: links,
+    creuaments_troballes: findingLinks,
     avisos: ["Dades sintètiques. Les troballes descriuen la mostra."],
   };
   return { ...report, instantania_id: fingerprint(JSON.stringify(report)) };
@@ -151,6 +166,10 @@ export function synthesisInput(w, base) {
       id: d.id, titol: d.titol, public: d.public, abast: d.abast, limitacio: d.limitacio,
     })),
     relacions_permeses: base.relacions_permeses,
+    creuaments_troballes: base.creuaments_troballes,
+    indicadors_comparables: w.survey.preguntes.filter(q => q.de_referencia && base.evidencies.some(e =>
+      e.pregunta_id === q.id && e.tipus === "escala_1_5" && e.favorable != null,
+    )).map(q => ({ id: q.id, que_mesura: promptText(q.que_mesura) })),
   };
 }
 
@@ -271,16 +290,26 @@ export function validateSynthesis(data, base, survey) {
     }
   });
   const troballes = checkedBlocks(data.troballes, (t, i) => {
-    if (!prose(t?.text) || !prose(t.limitacio) || !refs(t.evidencia_ids, evidence) ||
-        t.evidencia_ids.length !== 1) throw invalid();
-    return { id: `troballa_${i + 1}`, text: t.text, limitacio: t.limitacio, evidencia_ids: t.evidencia_ids };
+    if (!prose(t?.text) || !prose(t.hipotesi) || !prose(t.comprovacio) || !prose(t.limitacio) ||
+        !refs(t.evidencia_ids, evidence)) throw invalid();
+    const ids = t.evidencia_ids;
+    const allowedPair = ids.length === 2 && base.creuaments_troballes?.some(({ evidencia_ids }) =>
+      evidencia_ids.every(id => ids.includes(id)));
+    if (ids.length !== 1 && !allowedPair) throw invalid();
+    return { id: `troballa_${i + 1}`, text: t.text, hipotesi: t.hipotesi, comprovacio: t.comprovacio,
+      limitacio: t.limitacio, evidencia_ids: ids };
   });
   const fixed = survey.preguntes.filter(q => q.de_referencia).map(q => q.id);
   const accions = checkedBlocks(data.accions, (a, i) => {
     const follow = a?.seguiment;
     if (!["canvi", "recollida"].includes(a?.tipus) || !prose(a.titol, 140) ||
+        !prose(a.objectiu, 180) || !prose(a.justificacio, 300) ||
         !prose(a.rol_suggerit, 100) || !prose(a.primer_pas) || !prose(a.quan, 180) ||
         !prose(follow?.quan, 180) || !prose(follow.pregunta_adaptable, 220) ||
+        !prose(follow.criteri_impacte, 300) ||
+        (follow.pregunta_impacte_id !== null && (!fixed.includes(follow.pregunta_impacte_id) ||
+          !base.evidencies.some(e => e.pregunta_id === follow.pregunta_impacte_id &&
+            e.tipus === "escala_1_5" && e.favorable != null))) ||
         !Array.isArray(follow.opcions_suggerides) || follow.opcions_suggerides.length < 2 ||
         follow.opcions_suggerides.length > 6 || follow.opcions_suggerides.some(o => !prose(o, 100)) ||
         new Set(follow.opcions_suggerides.map(o => o.trim().toLocaleLowerCase("ca"))).size !== follow.opcions_suggerides.length ||
@@ -295,10 +324,12 @@ export function validateSynthesis(data, base, survey) {
           e.tipus === "tema" || e.regla?.estat === "complerta") && !a.diagnostic_ids.length))
       throw invalid();
     return {
-      id: `accio_${i + 1}`, tipus: a.tipus, titol: a.titol, evidencia_ids: a.evidencia_ids,
+      id: `accio_${i + 1}`, tipus: a.tipus, titol: a.titol, objectiu: a.objectiu,
+      justificacio: a.justificacio, evidencia_ids: a.evidencia_ids,
       diagnostic_ids: a.diagnostic_ids, rol_suggerit: a.rol_suggerit, primer_pas: a.primer_pas, quan: a.quan,
       seguiment: { quan: follow.quan, pregunta_adaptable: follow.pregunta_adaptable,
-        opcions_suggerides: follow.opcions_suggerides, preguntes_referencia_ids: fixed },
+        opcions_suggerides: follow.opcions_suggerides, preguntes_referencia_ids: fixed,
+        pregunta_impacte_id: follow.pregunta_impacte_id, criteri_impacte: follow.criteri_impacte },
     };
   });
   if (descartats && !troballes.length && !accions.length) throw invalid();

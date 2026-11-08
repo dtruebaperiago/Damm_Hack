@@ -205,14 +205,17 @@ const schemaObject = (properties) => ({
 });
 const analysisSchema = schemaObject({
   troballes: schemaList(schemaObject({
-    text: schemaText, evidencia_ids: schemaList(schemaText), limitacio: schemaText,
+    text: schemaText, hipotesi: schemaText, comprovacio: schemaText, limitacio: schemaText,
+    evidencia_ids: schemaList(schemaText),
   })),
   accions: schemaList(schemaObject({
     tipus: { type: "string", enum: ["canvi", "recollida"] },
-    titol: schemaText, evidencia_ids: schemaList(schemaText), diagnostic_ids: schemaList(schemaText),
+    titol: schemaText, objectiu: schemaText, justificacio: schemaText,
+    evidencia_ids: schemaList(schemaText), diagnostic_ids: schemaList(schemaText),
     rol_suggerit: schemaText, primer_pas: schemaText, quan: schemaText,
     seguiment: schemaObject({
       quan: schemaText, pregunta_adaptable: schemaText, opcions_suggerides: schemaList(schemaText),
+      pregunta_impacte_id: { type: ["string", "null"] }, criteri_impacte: schemaText,
     }),
   })),
 });
@@ -250,9 +253,11 @@ Retorna {"temes":[{"titol":"...","definicio":"...","vincles":[{"resposta_ref":".
 Comprova cada vincle independentment a partir del text complet i la definició del tema. Classifica'l com dona_suport, contradiu o indeterminat. Un fragment literal no prova suport si el text complet expressa negació o matís. No reprodueixis fragments.
 Retorna {"veredictes":[{"id":"identificador de vincle rebut","estat":"dona_suport, contradiu o indeterminat"}]}. Inclou exactament un veredicte per vincle rebut.`,
     analysis: `${common}
-Redacta en català a partir de fitxes verificades pel servidor. Descriu la mostra i respecta els límits de cada fitxa. Cap caràcter del zero al nou pot aparèixer en prosa; el servidor adjunta les xifres. Per exemple: «La proporció favorable de l’ítem es troba dins del rang de revisió». No atribueixis causes. No llegeixis una regla no complerta com a problema. Un tema de branca només descriu els textos analitzables de la repregunta. Cada troballa cita exactament una fitxa. Per comparar onades cal citar la fitxa explícita de comparació. El diagnòstic és històric i separat dels resultats actuals.
-Les troballes apareixen en un quadre de resultats per a People, en l’ordre retornat. Obre amb la troballa més rellevant per a la decisió de la consulta. Formula cada text com una frase breu amb el resultat observat i redacta la limitació com una frase concreta sobre qui o què s’ha mesurat. Evita repetir la mateixa conclusió. Si hi ha seguiment, distingeix l’evolució entre mostres del canvi entre les persones que han respost a totes dues onades. Ordena les accions per utilitat per a la decisió i vincula el primer pas amb la pregunta que permetrà comprovar-lo.
-Retorna {"troballes":[{"text":"...","evidencia_ids":["un ID de fitxa"],"limitacio":"..."}],"accions":[{"tipus":"canvi o recollida","titol":"...","evidencia_ids":["ID de fitxa"],"diagnostic_ids":["ID històric si escau"],"rol_suggerit":"...","primer_pas":"...","quan":"...","seguiment":{"quan":"...","pregunta_adaptable":"...","opcions_suggerides":["...","..."]}}]}.
+Redacta en català a partir de fitxes verificades pel servidor. Cap caràcter del zero al nou pot aparèixer en prosa; el servidor adjunta les xifres. No atribueixis causes. No llegeixis una regla no complerta com a problema. Per comparar onades cal citar la fitxa explícita de comparació. Mantén el diagnòstic històric separat dels resultats actuals.
+Prioritza les troballes que relacionen senyals útils per a la decisió de People. Cita una fitxa o un parell exacte de creuaments_troballes. Un creuament «agregats» permet comparar els resultats globals publicats; no informa d’associacions entre persones. Un creuament «branca» permet contextualitzar un tema amb la pregunta que condiciona la repregunta. El tema només descriu els comentaris analitzables de la branca i el filtre de la pregunta no constitueix una associació observada. Si no hi ha una connexió informativa, interpreta una fitxa o omet la troballa.
+En text explica què suggereix la relació per a la decisió, sense repetir la xifra o l’opció més votada. En hipotesi formula una explicació o predicció provisional. En comprovacio indica què observar o mesurar per contrastar-la. En limitacio identifica el límit que condiciona la lectura, com ara bases diferents, una branca opcional o l’autoselecció. Evita repetir la mateixa conclusió. Si hi ha seguiment, distingeix l’evolució entre mostres del canvi entre les persones que han respost a totes dues onades. Ordena les accions per utilitat per a la decisió i vincula el primer pas amb la pregunta que permetrà comprovar-lo.
+Per a cada acció escriu un títol que digui què fer i un objectiu que descrigui què hauria de canviar per a la plantilla o per a la recollida. A justificacio lliga l’evidència citada amb el canvi proposat i explica el mecanisme plausible. Evita repetir la dada o convertir una hipòtesi en certesa. A primer_pas indica una tasca concreta, amb un rol i un moment. Al seguiment, diferencia la comprovació d’arribada o ús de l’acció de la mesura del resultat que es vol canviar. A pregunta_impacte_id tria un ID d’indicadors_comparables que mesuri l’objectiu, o null si cap indicador hi encaixa. A criteri_impacte explica què miraries, com ho interpretaries i què revisaries si no millora. Si no hi ha indicador comparable, proposa una mesura concreta sense prometre una comparació. Descriu l’evolució entre mostres sense atribuir-la a l’acció. No inventis dates, xifres ni objectius numèrics i escriu els terminis amb paraules.
+Retorna {"troballes":[{"text":"...","hipotesi":"...","comprovacio":"...","limitacio":"...","evidencia_ids":["ID de fitxa"]}],"accions":[{"tipus":"canvi o recollida","titol":"...","objectiu":"...","justificacio":"...","evidencia_ids":["ID de fitxa"],"diagnostic_ids":["ID històric si escau"],"rol_suggerit":"...","primer_pas":"...","quan":"...","seguiment":{"quan":"...","pregunta_adaptable":"...","opcions_suggerides":["...","..."],"pregunta_impacte_id":null,"criteri_impacte":"..."}}]}.
 Màxim sis troballes i tres accions. Per defecte, cita una sola fitxa per acció. Si cites dues fitxes, han de coincidir exactament amb un parell de relacions_permeses. Una acció de canvi exigeix una fitxa actual amb estat de regla complerta, un tema verificat o un problema documentat per la mostra amb límits, i diagnostic_ids buit. Una acció de recollida pot citar un problema documentat, un risc de cobertura o un diagnòstic històric. Una acció és un suggeriment per a People. Proposa una pregunta neutral amb dues a sis opcions diferents, incloent-hi una sortida de no ús si escau. Retorna llistes buides si no hi ha suport.`,
   };
   const gptOss = config.model.startsWith("openai/gpt-oss-");

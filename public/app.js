@@ -128,7 +128,8 @@ const navItems = [
   ["actions", "action", "Accions i seguiment"],
 ];
 function shell(content, active = "overview", crumb = "Visió general") {
-  app.innerHTML = `<div class="shell"><aside class="sidebar"><a class="brand" href="#overview"><img class="brand-logo" src="/escoltamm-logo.png" alt="Escoltamm"><span class="brand-caption">Estrella Damm · People</span></a><div class="brand-divider"></div><nav class="nav" aria-label="Navegació principal">${navItems.map(([id, i, label]) => `<a href="#${id}" class="${active === id ? "active" : ""}" ${active === id ? 'aria-current="page"' : ""}>${icon(i)}${label}${id === "campaigns" && campaigns.length > 0 ? `<span class="nav-count">${campaigns.length}</span>` : ""}</a>`).join("")}</nav><div class="side-bottom"><nav class="nav" aria-label="Configuració"><a href="#settings" class="${active === "settings" ? "active" : ""}">${icon("settings")}Integracions</a></nav></div></aside><div class="workspace"><header class="topbar"><div class="breadcrumb"><span>Espai de People</span>${icon("arrow")}<strong>${esc(crumb)}</strong></div><div class="top-tools"><span class="mode-label">${session.mode === "demo" ? "Dades sintètiques" : "Entorn connectat"}</span><a class="mobile-settings" href="#settings" aria-label="Integracions">${icon("settings")}</a><button class="avatar" data-act="logout" title="Tancar la sessió" aria-label="Tancar la sessió de People">EP</button></div></header><main id="main" class="content">${content}</main></div></div>`;
+  app.innerHTML = `<div class="shell"><aside class="sidebar"><a class="brand" href="#overview"><img class="brand-logo" src="/escoltamm-logo.png" alt="Escoltamm"><span class="brand-caption">Estrella Damm · People</span></a><div class="brand-divider"></div><nav class="nav" aria-label="Navegació principal">${navItems.map(([id, i, label]) => `<a href="#${id}" class="${active === id ? "active" : ""}" ${active === id ? 'aria-current="page"' : ""}>${icon(i)}${label}${id === "campaigns" && campaigns.length > 0 ? `<span class="nav-count">${campaigns.length}</span>` : ""}</a>`).join("")}</nav><div class="side-bottom"><nav class="nav" aria-label="Configuració"><a href="#settings" class="${active === "settings" ? "active" : ""}">${icon("settings")}Integracions</a></nav></div></aside><div class="workspace"><header class="topbar"><div class="breadcrumb"><span>Espai de People</span>${icon("arrow")}<strong>${esc(crumb)}</strong></div><div class="top-tools"><span class="mode-label">${session.mode === "demo" ? "Dades sintètiques" : "Entorn connectat"}</span><a class="mobile-settings" href="#settings" aria-label="Integracions">${icon("settings")}</a>${session.passwordless ? "" : '<button class="avatar" data-act="logout" title="Tancar la sessió" aria-label="Tancar la sessió de People">EP</button>'}</div></header><main id="main" class="content">${content}</main></div></div>`;
+  positionRatingLabels();
   const main = $("#main");
   main.setAttribute("tabindex", "-1");
   main.focus({ preventScroll: true });
@@ -145,7 +146,7 @@ function empty(title, text = "", action = "") {
   return `<div class="empty"><h3>${title}</h3>${text ? `<p>${text}</p>` : ""}${action}</div>`;
 }
 function table(list) {
-  return `<div class="table-wrap"><table><thead><tr><th scope="col">Campanya</th><th scope="col">Estat</th><th scope="col">Respostes</th><th scope="col">Proper pas</th></tr></thead><tbody>${list.map((c) => `<tr><td><button class="row-link" data-open="${esc(c.id)}"><span class="campaign-title"><span class="campaign-icon">${icon(c.parent_id ? "action" : "campaign")}</span><span><strong>${esc(c.titol)}</strong><small>${esc(c.public.sector)} · ${esc(c.public.torn)}${c.parent_id ? " · Seguiment" : ""}${c.source === "simulation" ? " · Dades sintètiques" : ""}</small></span></span></button></td><td>${badge(c.state)}</td><td>${num(c.total)}${c.total !== null ? "<small> · finals</small>" : ""}</td><td><a class="text-link" href="#campaign/${esc(c.id)}/${c.state === "closed" ? "results" : c.state === "published" ? "share" : "survey"}">${c.state === "closed" ? "Veure resultats" : c.state === "published" ? "Compartir QR" : c.state === "approved" ? "Publicar" : "Revisar consulta"} ${icon("arrow")}</a></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th scope="col">Campanya</th><th scope="col">Estat</th><th scope="col">Respostes</th><th scope="col">Proper pas</th></tr></thead><tbody>${list.map((c) => `<tr><td><button class="row-link" data-open="${esc(c.id)}"><span class="campaign-title"><span class="campaign-icon">${icon(c.parent_id ? "action" : "campaign")}</span><span><strong>${esc(c.titol)}</strong><small>${esc(c.public.sector)} · ${esc(c.public.torn)}${c.parent_id ? " · Seguiment" : ""}${c.source === "simulation" ? " · Dades sintètiques" : ""}${c.id === session.scenario_a?.results_id ? " · Resultats preparats de l’Escenari A" : ""}</small></span></span></button></td><td>${badge(c.state)}</td><td>${num(c.total)}${c.total !== null ? "<small> · finals</small>" : ""}</td><td><a class="text-link" href="#campaign/${esc(c.id)}/${c.state === "closed" ? "results" : c.state === "published" ? "share" : "survey"}">${c.state === "closed" ? "Veure resultats" : c.state === "published" ? "Compartir QR" : c.state === "approved" ? "Publicar" : "Revisar consulta"} ${icon("arrow")}</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 function stats() {
   const active = campaigns.filter((c) => c.state === "published").length,
@@ -318,8 +319,8 @@ function historicalTrend(chartOnly = false) {
   const hasDetails = chartOnly ? Boolean(chart) : signals.length > 0;
   return `<section class="panel section calibration-review" aria-labelledby="review-calibration">
     <h2 id="review-calibration">Tendència històrica</h2>
-    <p>${summary}</p>
-    ${plan && signals[0].abast === "ampli" ? "<p>Context històric de tota la planta, amb els dos torns agrupats.</p>" : ""}
+    ${chartOnly ? "" : `<p>${summary}</p>`}
+    ${!chartOnly && plan && signals[0].abast === "ampli" ? "<p>Context històric de tota la planta, amb els dos torns agrupats.</p>" : ""}
     ${plan}
     ${hasDetails ? `<details class="calibration-evidence">
       <summary>${!chartOnly && adaptations.length ? "Dades del sondeig i propostes de la IA" : "Dades del sondeig"}</summary>
@@ -344,7 +345,7 @@ function detailFrame(inner) {
         : `<a class="btn btn-primary" href="#campaign/${w.id}/survey">Revisar la consulta ${icon("arrow")}</a>`
       : w.state === "approved"
         ? `<button class="btn btn-primary" data-act="publish">${icon("send")}Publicar consulta</button>`
-        : ["uncertain", "publishing"].includes(w.state)
+        : !session.scenario_a && ["uncertain", "publishing"].includes(w.state)
           ? '<button class="btn btn-primary" data-act="reconcile">Reconciliar publicació</button>'
           : "";
   shell(
@@ -443,9 +444,9 @@ function surveyView() {
     <section class="panel survey-questions" aria-labelledby="survey-questions"><header class="survey-list-heading"><h2 id="survey-questions">Preguntes de la consulta</h2>
       ${count ? `<small>${count} preguntes · ${draft.temps_estimat_segons} s estimats</small>` : ""}</header>
       ${editable ? `<div class="toolbar survey-toolbar">
-        <button class="btn btn-small ${session.integrations.llm && !count ? "btn-primary" : ""}" data-act="generate" ${session.integrations.llm ? "" : "disabled"}>Generar amb IA real</button>
+        ${session.scenario_a && count ? "" : `<button class="btn btn-small ${session.integrations.llm && !count ? "btn-primary" : ""}" data-act="generate" ${session.integrations.llm ? "" : "disabled"}>${session.scenario_a ? "Simular crida a Groq" : "Generar amb IA"}</button>`}
         ${draft.preguntes.some(q => !q.de_referencia) ? `<button class="btn btn-small" data-act="edit-questions">${editingQuestions ? "Acabar l’edició" : "Editar preguntes manualment"}</button>` : ""}
-        <button class="btn btn-small" data-act="save">Desar canvis</button><button class="btn btn-small btn-quiet" data-act="json">Editar JSON complet</button>
+        <button class="btn btn-small" data-act="save">Desar canvis</button>
         ${session.integrations.llm ? "" : '<small>Configura la IA a <a class="text-link" href="#settings">Integracions</a>.</small>'}</div>` : ""}
       ${count ? draft.preguntes.map((q, i) => questionEditor(q, i, editable && editingQuestions, adaptations, signals)).join("") : empty("Encara no hi ha preguntes")}
     </section>
@@ -501,32 +502,99 @@ function shareView() {
 }
 function simulationResults(w) {
   const { kpi, comparacions, total, taxa, population } = w.results;
-  const reading = (label, value, base) =>
-    `<div class="topic-row"><span>${label}<br><small>Base: ${num(base)}</small></span><strong>${num(value, "%")}</strong></div>`;
-  const metricName = { comprensio: "Comprensió", suport: "Suport" };
-  return `${notice("Dades sintètiques de l’etapa 03. Les bases petites i els seus complements es protegeixen.")}
-    <section class="panel section"><h2>Resultats de l’onada</h2>
-      <p>${num(total)} trameses vàlides de ${num(population)} persones elegibles · ${num(taxa, "%")} de participació aparent</p>
-      <p>Les respostes 4 i 5 compten com a favorables sobre la base vàlida de cada pregunta.</p>
-      ${Object.entries(metricName).map(([id, name]) =>
-        reading(name + " favorable", kpi[id + "_favorable_pct"], kpi[id + "_base_escala"]),
-      ).join("")}
-      ${reading("Dificultat principal: entendre el funcionament", kpi.dificultat_funcionament_pct, kpi.dificultat_funcionament_base)}
-      ${kpi.onada > 1 ? reading("Ha rebut el resum", kpi.arribada_resum_si_pct, kpi.arribada_resum_si_base) : ""}
-      ${reading("Pes del torn de dia entre els torns declarats", kpi.pes_dia_mostra_pct, kpi.base_torns_declarats)}
-      <p><small>Pes del torn de dia al públic elegible: ${num(kpi.pes_dia_poblacio_pct, "%")}.</small></p>
+  const metricName = { comprensio: "Comprensió del canvi", suport: "On demanar ajuda" };
+  const signals = [
+    ...Object.entries(metricName).map(([id, title]) => ({
+      title: resultQuestionTitle(w, id, title), value: kpi[id + "_favorable_pct"], count: kpi[id + "_favorable_n"],
+      base: kpi[id + "_base_escala"], unit: "respostes vàlides", label: "Favorables (4 o 5)",
+    })),
+    {
+      title: resultQuestionTitle(w, "dificultat_principal", "Dificultat amb el funcionament"), value: kpi.dificultat_funcionament_pct,
+      count: kpi.dificultat_funcionament_n, base: kpi.dificultat_funcionament_base,
+      unit: "respostes substantives", label: "Han triat aquesta dificultat",
+    },
+    ...(kpi.onada > 1 ? [{
+      title: resultQuestionTitle(w, "arribada_resum", "Arribada del resum"), value: kpi.arribada_resum_si_pct, count: kpi.arribada_resum_si_n,
+      base: kpi.arribada_resum_si_base, unit: "trameses vàlides", label: "Diuen que l’han rebut",
+    }] : []),
+  ];
+  return `<div class="results-dashboard" data-brand="estrella-damm">
+    ${resultsDigest(w, signals, "Dades sintètiques · Simulació", w.config.context)}
+    <section class="panel section"><h2>Qui ha respost?</h2>
+      <p>${num(total)} trameses vàlides de ${num(population)} persones elegibles · ${num(taxa, "%")} de participació aparent.</p>
+      <p>El torn de dia representa el ${num(kpi.pes_dia_poblacio_pct, "%")} del públic elegible.</p>
+      ${kpi.pes_dia_mostra_pct == null ? "<p>El pes del torn de dia a la mostra no està disponible.</p>" :
+        resultBarRow("Torn de dia entre els torns declarats", kpi.pes_dia_mostra_pct, 100,
+          `${num(kpi.pes_dia_mostra_pct, "%")} · base: ${num(kpi.base_torns_declarats)}`)}
     </section>
     ${comparacions.length ? `<section class="panel section"><h2>Evolució entre mostres</h2>
-      <p>Mostres voluntàries sense aparellar. La no resposta, l’autoselecció i els canvis de composició poden afectar la comparació.</p>
-      ${comparacions.map((row) => `<div class="topic-row">
-        <span>${metricName[row.pregunta_id]} · <a class="text-link" href="#campaign/${esc(row.campanya_origen_id)}/results">Onada ${row.onada_origen}</a> → ${row.onada_desti}<br>
-        <small>${row.delta_favorable_pp === null ? esc(row.motiu_o_limit) : `${num(row.favorable_origen_pct, "%")} → ${num(row.favorable_desti_pct, "%")} · Bases ${num(row.base_origen)} → ${num(row.base_desti)}`}</small></span>
-        <strong>${num(row.delta_favorable_pp, " pp")}</strong>
-      </div>`).join("")}
+      <p>Percentatge favorable en cada mostra voluntària. La composició de la mostra pot variar d’una onada a l’altra.</p>
+      <div class="results-comparison-grid">${comparacions.map(row => `<article class="action-evidence">
+        <strong>${esc(resultQuestionTitle(w, row.pregunta_id, metricName[row.pregunta_id] ?? row.pregunta_id))}</strong>
+        <p><a class="text-link" href="#campaign/${esc(row.campanya_origen_id)}/results">Onada ${num(row.onada_origen)}</a>
+          → Onada ${num(row.onada_desti)}</p>
+        ${row.delta_favorable_pp == null ? `<p>${esc(row.motiu_o_limit)}</p>` : `
+          ${resultBarRow(`Onada ${num(row.onada_origen)} · base: ${num(row.base_origen)}`, row.favorable_origen_pct, 100, num(row.favorable_origen_pct, "%"), "bar-neutral")}
+          ${resultBarRow(`Onada ${num(row.onada_desti)} · base: ${num(row.base_desti)}`, row.favorable_desti_pct, 100, num(row.favorable_desti_pct, "%"))}
+          <p class="results-chart-note">Canvi: ${signedPoints(row.delta_favorable_pp)}</p>`}
+      </article>`).join("")}</div>
     </section>` : ""}
     <div class="form-actions"><a class="btn" href="/api/campaigns/${w.id}/export">${icon("download")}Exportar agregats</a>
-      <a class="btn btn-primary" href="#campaign/${w.id}/action">Veure acció i seguiment ${icon("arrow")}</a></div>`;
+      <a class="btn btn-primary" href="#campaign/${w.id}/action">Veure acció i seguiment ${icon("arrow")}</a></div>
+  </div>`;
 }
+
+function resultsDigest(w, signals, source, context = "") {
+  const { total, taxa, population } = w.results;
+  const { public: audience, opens, closes } = w.config;
+  const period = Number.isFinite(opens) && Number.isFinite(closes)
+    ? resultPeriod({ inici: opens, fi: closes }) : "";
+  const visible = total == null ? [] : signals.filter(s => Number.isFinite(s.value) && s.base > 0);
+  return `<section class="results-digest" aria-labelledby="results-digest-title">
+    <header class="results-digest-intro">
+      <p class="results-kicker">Resum de l’onada</p>
+      <h2 id="results-digest-title">En un cop d’ull</h2>
+      ${source ? `<span class="results-source">${esc(source)}</span>` : ""}
+      <p>${[audience?.ubicacio || audience?.sector, audience?.torn, period].filter(Boolean).map(esc).join(" · ")}</p>
+      ${total == null ? "" : `<p><strong>${num(total)} trameses vàlides</strong>${taxa == null ? "<br>Taxa de participació no disponible" :
+        ` de ${num(population)} persones elegibles<br>${num(taxa, "%")} de participació aparent`}</p>`}
+      ${total != null && Number.isFinite(taxa) && taxa >= 0 && taxa <= 100 ? `<div class="results-digest-participation">${resultBar(taxa, 100)}</div>` : ""}
+      ${context ? `<p>${esc(context)}</p>` : ""}
+    </header>
+    <div class="results-digest-signals">
+      ${visible.length ? visible.map(s => `<article class="results-digest-signal">
+        <div><h4>${esc(s.title)}</h4><strong>${num(s.value, "%")}</strong></div>
+        <p>${esc(s.label)} · ${s.count == null ? "Base: " : `${num(s.count)} de `}${num(s.base)} ${esc(s.unit)}</p>
+        ${resultBar(s.value, 100, s.tone)}
+      </article>`).join("") : `<p>${total == null ? "Dades insuficients per mostrar resultats d’aquesta onada."
+        : "Aquesta onada encara no té indicadors publicables per al resum."}</p>`}
+      ${visible.length ? '<p class="results-chart-note">Cada percentatge es calcula sobre la base indicada a sota.</p>' : ""}
+    </div>
+  </section>`;
+}
+
+function digestSignals(r, referenceIds) {
+  const metrics = r.metrics.filter(m => m.favorable != null && m.n > 0);
+  const scales = [...metrics.filter(m => referenceIds.has(m.id)), ...metrics.filter(m => !referenceIds.has(m.id))]
+    .map(m => ({
+      title: resultQuestionTitle(current, m.id, resultMetricName(m)), label: `Favorables (${(m.opcions_favorables ?? ["4", "5"]).join(" o ")})`,
+      value: m.favorable, count: m.favorables, base: m.n, unit: "respostes vàlides",
+    }));
+  const leaders = (r.seleccions ?? []).flatMap(q => {
+    const positive = q.opcions.filter(o => o.n > 0);
+    if (!positive.length) return [];
+    const max = Math.max(...positive.map(o => o.n));
+    const top = positive.filter(o => o.n === max);
+    return [{
+      title: resultQuestionTitle(current, q.id, current.survey.preguntes.find(p => p.id === q.id)?.que_mesura || q.text),
+      label: top.length === 1 ? `Més triada: ${top[0].etiqueta}`
+        : `Empat al capdavant: ${top.map(o => o.etiqueta).join(" / ")} (cadascuna)`,
+      value: max / q.base * 100, count: max, base: q.base, unit: "respostes substantives", tone: "bar-gold",
+    }];
+  });
+  return (leaders.length ? [leaders[0], ...scales, ...leaders.slice(1)] : scales).slice(0, 3);
+}
+
 function resultView() {
   if (current.source === "simulation") return simulationResults(current);
   const r = current.results;
@@ -539,61 +607,43 @@ function resultView() {
   }
 
   const referenceIds = new Set(current.survey.preguntes.filter(q => q.de_referencia).map(q => q.id));
-  const headlineMetrics = [...r.metrics.filter(m => referenceIds.has(m.id)),
-    ...r.metrics.filter(m => !referenceIds.has(m.id))].slice(0, 2);
   const hasComments = current.survey.preguntes.some(q => q.tipus === "text_lliure");
-  const sources = (r.origens ?? []).map(o => responseSources[o.source] ?? o.source);
-  const cards = [
-    { value: num(r.total), label: "Respostes acceptades", note: r.total == null ? "Recompte protegit" : "Trameses vàlides", glyph: "campaign" },
-    { value: num(r.taxa, "%"), label: "Participació aparent", note: r.taxa == null
-      ? "Taxa no disponible" : `${num(r.total)} de ${num(r.population)} persones elegibles`, glyph: "people", ring: r.taxa },
-    ...headlineMetrics.map(m => ({
-      value: num(m.favorable, "%"), label: resultMetricName(m),
-      note: m.favorable == null ? "Percentatge no disponible" : `Favorables · ${num(m.n)} respostes vàlides`,
-      glyph: "chart",
-    })),
-    ...(hasComments ? [{ value: num(r.textos), label: "Comentaris analitzables", glyph: "comment", note:
-      r.textos == null ? "Recompte no disponible" : "De la pregunta oberta" }] : []),
-  ];
+  const source = current.id === session.scenario_a?.results_id ? "Escenari A · Dades sintètiques"
+    : (r.origens ?? []).map(o => responseSources[o.source] ?? o.source).join(" · ");
 
   return `<div class="results-dashboard" data-brand="estrella-damm">
-    <header class="results-banner">
-      <div><p class="results-kicker">Estrella Damm <span> / </span> Escolta activa</p>
-        <h2>Resultats de la consulta</h2>
-        <p>Una lectura conjunta de les respostes i els comentaris de l’onada.</p>
-      </div>
-      <div class="results-banner-meta">
-        ${sources.length ? `<span class="results-source">${esc(sources.join(" · "))}</span>` : ""}
-        <a class="btn" href="/api/campaigns/${current.id}/export">${icon("download")}Exportar agregats</a>
-      </div>
-    </header>
-    <section class="results-kpis" aria-label="Indicadors de l’onada">
-      ${cards.map(({ value, label, note, glyph, ring }) => `<article class="results-kpi">
-        <div class="results-kpi-label"><span class="results-glyph">${icon(glyph)}</span><h3>${esc(label)}</h3></div>
-        <div class="results-kpi-value">${value}
-          ${ring == null ? "" : `<svg class="results-ring" viewBox="0 0 44 44" aria-hidden="true">
-            <circle cx="22" cy="22" r="17" pathLength="100"/>
-            <circle cx="22" cy="22" r="17" pathLength="100" stroke-dasharray="${ring} 100" transform="rotate(-90 22 22)"/>
-          </svg>`}
-        </div><small>${esc(note)}</small>
-      </article>`).join("")}
-    </section>
-    ${r.informe_base && !r.informe ? analysisControls(current, true) : ""}
-    ${r.total === null ? notice("Dades insuficients per mostrar resultats d’aquesta onada.") : `
+    <p class="results-privacy-notice">${icon("shield")}<span><strong>Protecció de la mostra.</strong> Si un segment té menys de 10 respostes, també s’oculten els recomptes que permetrien deduir-lo per diferència.</span></p>
+    <section class="results-section" aria-labelledby="quantitative-results">
+      <header><h2 id="quantitative-results">Resultats numèrics</h2><p>Estadístiques calculades directament sobre les respostes.</p></header>
+      ${resultsDigest(current, digestSignals(r, referenceIds), source)}
+      ${r.total === null ? "" : `
       <div class="results-charts">
         ${r.metrics.length ? resultRatings(r.metrics) : ""}
-        ${hasComments ? resultComments(current) : ""}
         ${(r.seleccions ?? []).map(resultSelection).join("")}
         ${r.torns.length ? resultCoverage(r) : ""}
       </div>`}
-    ${analysisResults(current)}
-    ${resultComparisons(current)}
-    ${r.total === null ? "" : resultDetails(r)}
+      ${resultComparisons(current)}
+    </section>
+    ${hasComments || current.analysis ? `<section class="results-section" aria-labelledby="qualitative-results">
+      <header><h2 id="qualitative-results">${current.analysis ? "Anàlisi amb IA" : "Anàlisi dels comentaris"}</h2>
+        <p>${current.analysis ? "Temes dels comentaris, interpretació i propostes d’acció." : "Temes agrupats a partir de les respostes obertes."}</p></header>
+      ${analysisControls(current)}
+      ${r.total !== null && hasComments ? resultComments(current) : ""}
+      ${analysisResults(current)}
+    </section>` : ""}
     <div class="form-actions">
       <a class="btn" href="/api/campaigns/${current.id}/export">${icon("download")}Exportar agregats</a>
       <a class="btn btn-primary" href="#campaign/${current.id}/action">Decidir el proper pas ${icon("arrow")}</a>
     </div>
   </div>`;
+}
+function resultQuestionLabel(w, id) {
+  const index = w?.survey.preguntes.findIndex(q => q.id === id) ?? -1;
+  return index < 0 ? "" : `Q${index + 1}`;
+}
+function resultQuestionTitle(w, id, title) {
+  const label = resultQuestionLabel(w, id);
+  return label ? `${label} · ${title}` : title;
 }
 function resultMetricName(metric) {
   const measure = current.survey.preguntes.find(q => q.id === metric.id)?.que_mesura;
@@ -622,137 +672,118 @@ function resultRatings(metrics) {
   return resultChart("Com s’han repartit les puntuacions?", "Respostes d’escala", `
     <div class="results-chart-list">${metrics.map(m => {
       let start = 0;
+      const mean = m.distribution && m.n ? m.distribution.reduce((sum, n, i) => sum + n * (i + 1), 0) / m.n : null;
+      let position = 0;
+      const labels = m.distribution?.map(count => {
+        const center = m.n ? (position + count / 2) / m.n * 100 : 0;
+        position += count;
+        return center;
+      });
       return `<article class="results-rating">
-        <div class="results-rating-head"><div><h4>${esc(resultMetricName(m))}</h4>
-          <small>${m.n == null ? "Base protegida" : `${num(m.n)} respostes vàlides`}</small></div>
+        <div class="results-rating-head"><div><h4>${esc(resultQuestionTitle(current, m.id, resultMetricName(m)))}</h4>
+          <small>${m.n == null ? "Base protegida" : `${num(m.n)} respostes vàlides`}${mean == null ? "" : ` · Mitjana ${num(mean)} de 5`}</small></div>
           <strong>${m.favorable == null ? "—" : `${num(m.favorable, "%")} favorables`}</strong></div>
-        ${m.distribution ? `<svg class="results-rating-bar" viewBox="0 0 ${m.n} 16" preserveAspectRatio="none" aria-hidden="true">
+        ${m.distribution ? `<div class="results-rating-visual"><svg class="results-rating-bar" viewBox="0 0 ${m.n} 16" preserveAspectRatio="none" aria-hidden="true">
           ${m.distribution.map((count, i) => {
             const segment = `<rect class="rating-${i + 1}" x="${start}" width="${count}" height="16"/>`;
             start += count;
             return segment;
           }).join("")}
         </svg>
-        <ul class="results-rating-key" aria-label="Recompte per puntuació">${ratings.map((rating, i) => `<li>
+        <ul class="results-rating-key" aria-label="Recompte per puntuació">${ratings.map((rating, i) => `<li data-center="${labels[i]}">
           <span class="rating-${rating}">${rating}</span><strong>${num(m.distribution[i])}</strong>
-        </li>`).join("")}</ul>` : '<p class="results-chart-note">Distribució protegida.</p>'}
+        </li>`).join("")}</ul></div>` : '<p class="results-chart-note">Distribució protegida.</p>'}
       </article>`;
     }).join("")}</div>
     <p class="results-chart-note">Escala de l’1 al 5. Sota cada puntuació es mostra el nombre de respostes.</p>`,
     "Cada barra mostra com es reparteixen les puntuacions d’una pregunta.");
 }
+function positionRatingLabels() {
+  document.querySelectorAll(".results-rating-key").forEach(key => {
+    const lanes = [];
+    const width = key.clientWidth;
+    key.querySelectorAll("li").forEach(label => {
+      const center = Number(label.dataset.center);
+      const x = width * center / 100;
+      const halfWidth = Math.max(label.offsetWidth, 18) / 2;
+      let lane = lanes.findIndex(right => x - halfWidth >= right + 4);
+      if (lane < 0) { lane = lanes.length; lanes.push(0); }
+      lanes[lane] = x + halfWidth;
+      label.style.left = `${center}%`;
+      label.style.top = `${lane * 42}px`;
+    });
+    key.style.height = `${lanes.length * 42}px`;
+  });
+}
+window.addEventListener("resize", positionRatingLabels);
 function resultComments(w) {
   const { branca, temes, textos } = w.results;
-  const state = w.analysis?.tema;
+  const state = textos == null && w.analysis?.tema === "tancat" ? "indisponible" : w.analysis?.tema;
+  const automatic = w.analysis?.automatic;
   const eligible = branca?.elegibles;
   const status = {
     disponible: "Els textos estan disponibles per iniciar l’anàlisi amb Groq.",
     pendent: "People ha de revisar el suport de cada tema abans de mostrar-lo aquí.",
     tancat: "L’informe d’aquesta onada es va generar abans de revisar els temes.",
     revisat: "Cap tema ha assolit el mínim de mencions revisades per mostrar-se.",
-    indisponible: "Els temes es mostren quan hi ha prou textos analitzables i revisats.",
+    indisponible: textos == null
+      ? "Calen almenys 10 comentaris analitzables i una base que es pugui mostrar amb seguretat."
+      : "Els textos ja no estan disponibles per revisar-ne els temes.",
   };
-  return resultChart("Què recullen els comentaris?", "Text lliure", `
-    ${eligible != null && textos != null ? `<div class="results-text-coverage">
-      ${resultBarRow("Elegibles per a la pregunta", eligible, eligible, num(eligible), "bar-neutral")}
-      ${resultBarRow("Comentaris analitzables", textos, eligible, num(textos), "bar-gold")}
-    </div>` : `<p class="results-chart-note">${textos == null ? "Recompte de comentaris no disponible." : `${num(textos)} comentaris analitzables.`}</p>`}
+  const emptyReason = automatic && textos != null
+    ? automatic === "complete" ? "Cap tema ha assolit el mínim de mencions verificades."
+      : automatic === "failed" ? "L’anàlisi dels comentaris està pendent." : "La IA està agrupant els comentaris."
+    : status[state] ?? (textos == null ? status.indisponible : status.revisat);
+  const question = w.survey.preguntes.find(q => q.tipus === "text_lliure");
+  return resultChart(resultQuestionTitle(w, question?.id, "Què recullen els comentaris?"), "Text lliure", `
+    <p>${textos == null ? "Recompte de comentaris no disponible." : `${num(textos)} comentaris analitzables${eligible != null ? ` de ${num(eligible)}` : ""}`}</p>
     <div class="results-theme-head"><h4>Temes dels comentaris</h4>
-      ${state === "disponible" ? analysisButton(w, "themes", "Descobrir temes amb Groq", !session.integrations.analysis) : ""}
-      ${state === "pendent" ? analysisButton(w, "theme-review", "Revisar suports dels temes") : ""}
+      ${!automatic && state === "disponible" ? analysisButton(w, "themes", "Descobrir temes amb Groq", !session.integrations.analysis) : ""}
+      ${!automatic && state === "pendent" ? analysisButton(w, "theme-review", "Revisar suports dels temes") : ""}
     </div>
-    ${temes.length ? `<div class="results-chart-list">
-      ${[...temes].sort((a, b) => b.n - a.n).map(t => `<div class="results-theme">
-        ${resultBarRow(t.titol, t.n, t.base ?? textos, `${num(t.n)} de ${num(t.base ?? textos)}`, "bar-gold")}
-        ${t.definicio ? `<p class="results-chart-note">${esc(t.definicio)}</p>` : ""}
-      </div>`).join("")}
-      <p class="results-chart-note">Una menció per tema i comentari. Un comentari pot aparèixer en diversos temes.</p>
-    </div>` : `<div class="results-chart-empty">${icon("info")}<div><strong>Encara no hi ha temes publicables</strong>
-      <p>${status[state] ?? status.indisponible}</p></div></div>`}`,
-    "Cobertura de la pregunta oberta i temes amb prou suport.");
+    ${temes.length ? `<div class="results-theme-grid">
+      ${[...temes].sort((a, b) => b.n - a.n).map(t => themeMap(t, t.base ?? textos)).join("")}
+    </div>`
+    : `<div class="results-chart-empty">${icon("info")}<div><strong>Encara no hi ha temes publicables</strong>
+      <p>${emptyReason}</p></div></div>`}`);
+}
+function themeMap(theme, base) {
+  const total = Math.min(base, 40);
+  const highlighted = Math.round(total * theme.n / base);
+  const columns = 10;
+  return `<article class="results-theme">
+    <h4>${esc(theme.titol)}</h4>
+    <strong>${num(theme.n)} de ${num(base)} comentaris</strong>
+    <svg class="results-theme-dots" viewBox="0 0 ${columns * 12} ${Math.ceil(total / columns) * 12}" aria-hidden="true">
+      ${Array.from({ length: total }, (_, i) => `<circle class="${i < highlighted ? "theme-match" : ""}" cx="${6 + i % columns * 12}" cy="${6 + Math.floor(i / columns) * 12}" r="4"/>`).join("")}
+    </svg>
+    ${theme.definicio ? `<p>${esc(theme.definicio)}</p>` : ""}
+  </article>`;
 }
 function resultSelection(q) {
   const title = current.survey.preguntes.find(p => p.id === q.id)?.que_mesura || q.text;
   const options = q.opcions.filter(o => o.n > 0);
-  return resultChart(title, "Selecció única", `<div class="results-chart-list">
+  return resultChart(resultQuestionTitle(current, q.id, title), "Selecció única", `<div class="results-chart-list">
       ${options.sort((a, b) => b.n - a.n).map(o => resultBarRow(o.etiqueta, o.n, q.base,
         `${num(o.n)} · ${num(o.n / q.base * 100, "%")}`)).join("")}
-    </div><p class="results-chart-note">Una opció per resposta. El detall inclou totes les opcions.</p>`,
+    </div>`,
     `${num(q.base)} respostes vàlides per a aquesta pregunta.`);
 }
 function resultCoverage(r) {
   const shifts = r.torns.filter(s => s.pes_mostra != null && (s.n > 0 || s.pes_poblacio != null));
+  if (!shifts.length) return "";
   return resultChart("Qui ha respost?", "Cobertura de la mostra",
-    shifts.length ? `<div class="results-chart-list">
+    `<div class="results-chart-list">
       ${shifts.map(s => `<article class="results-shift"><h4>Torn de ${esc(s.torn.toLowerCase())}
         <small>${num(s.n)} respostes</small></h4>
         ${resultBarRow("Mostra", s.pes_mostra, 100, num(s.pes_mostra, "%"))}
         ${s.pes_poblacio == null ? "" : resultBarRow("Públic elegible", s.pes_poblacio, 100, num(s.pes_poblacio, "%"), "bar-neutral")}
       </article>`).join("")}</div>
-      <p class="results-chart-note">El pes de cada torn es calcula sobre les ${num(r.total)} respostes acceptades.</p>`
-    : '<p class="results-chart-note">Desglossament protegit per mida de mostra.</p>',
+      <p class="results-chart-note">El pes de cada torn es calcula sobre les ${num(r.total)} respostes acceptades.</p>`,
     "Pes de cada torn en les respostes i en el públic elegible.");
 }
-function resultDetails(r) {
-  const states = {
-    no_valorable: "No valorable", no_us: "No ús", negativa: "Negatives", no_mostrada: "No elegibles",
-    omesa: "Omeses", invalida: "Invàlides", desconeguda: "Desconegudes",
-  };
-  return `<details class="panel section results-details">
-    <summary>Detall de les respostes i de la mostra</summary>
-    <p class="muted">Les bases inferiors a deu i els complements petits es protegeixen.</p>
-    <div class="detail-grid">
-      <div>
-        ${r.metrics.length ? `<section class="panel">
-          <div class="panel-head"><div><h2>Distribució i bases per pregunta</h2>
-            <p>Les proporcions favorables es calculen sobre les respostes numèriques vàlides.</p>
-          </div></div>
-          ${r.metrics.map(m => `<article class="metric-card">
-            <div><h3>${esc(m.text)}</h3>
-              <small>Base vàlida: ${num(m.n)} · «No ho puc valorar» queda fora de l’escala.
-                Favorables: ${esc((m.opcions_favorables ?? ["4", "5"]).join(", "))}.</small>
-              ${m.distribution ? `<div class="distribution">${m.distribution.map((n, i) => `<div>${num(n)}
-                <progress value="${n}" max="${m.n}" aria-label="Puntuació ${i + 1}: ${n} respostes"></progress>${i + 1}
-              </div>`).join("")}</div>` : "<p><small>Distribució protegida per categories o complements petits.</small></p>"}
-              ${m.absencies?.length ? `<small>${m.absencies.map(a => `${states[a.estat]}: ${num(a.n)}`).join(" · ")}</small>` : ""}
-            </div>
-            <div class="large-number">${num(m.favorable, "<small>%</small>")}<div><small>favorables</small></div></div>
-          </article>`).join("")}
-        </section>` : ""}
-        <section class="panel">
-          <div class="panel-head"><div><h2>Temes que es repeteixen</h2>
-            <p>Una menció per tema i resposta · base de textos analitzables: ${num(r.textos)}</p>
-          </div></div>
-          <div class="panel-body">
-            ${r.branca ? `<p><small>Elegibles per a l’aclariment: ${num(r.branca.elegibles)} · Respostes: ${num(r.branca.respostes)} ·
-              Textos analitzables: ${num(r.branca.respostes_text)}<br>${esc(r.branca.visibilitat)}</small></p>` : ""}
-            ${r.temes.length ? r.temes.map(t => `<div class="topic-row"><strong>${esc(t.titol)}</strong>
-              <span class="topic-n">${num(t.n)} mencions</span></div>`).join("") :
-              empty("Sense temes publicables", "Cal prou suport revisat per publicar un tema.")}
-          </div>
-        </section>
-        ${(r.seleccions || []).map(q => `<section class="panel section"><h2>${esc(q.text)}</h2>
-          <p>Base de respostes substantives: ${num(q.base)}.</p>
-          ${q.opcions.map(o => `<div class="topic-row"><span>${esc(o.etiqueta)}</span><span>${num(o.n)}</span></div>`).join("")}
-        </section>`).join("")}
-      </div>
-      <aside>
-        <section class="panel section"><h2>Mostra per torn</h2>
-          ${r.torns.length === 0 ? "<p>Sense dades de torn de feina.</p>" : r.torns.map(s => `<div class="topic-row"><span>Torn de ${esc(s.torn.toLowerCase())}<br>
-            <small>${num(s.pes_mostra, "%")} de la mostra · ${num(s.pes_poblacio, "%")} del públic</small></span>
-            <span>${num(s.n)}<br><small>${s.diferencia === null ? "Protegit" : num(s.diferencia, " pp")}</small></span>
-          </div>`).join("")}
-          <p><small>La composició de la mostra ajuda a valorar la cobertura dels torns.</small></p>
-        </section>
-        <section class="panel section"><h2>Origen de les respostes</h2>
-          ${(r.origens || []).map(o => `<p><strong>${esc(responseSources[o.source] ?? o.source)}</strong><br>
-            ${num(o.n)} respostes publicables</p>`).join("")}
-        </section>
-      </aside>
-    </div>
-  </details>`;
-}
 const responseSources = { fixture: "Llavor sintètica", local: "Formulari local", typeform: "Typeform" };
+const signedPoints = value => `${value > 0 ? "+" : ""}${num(value)} punts percentuals`;
 const resultPeriod = ({ inici, fi }) =>
   [inici, fi].map(value => new Date(value).toLocaleDateString("ca-ES")).join(" – ");
 
@@ -761,7 +792,7 @@ function resultComparisons(w) {
   if (!comparacio) return "";
   const between = comparacions.filter(e => e.tipus === "entre_mostres");
   const paired = comparacions.filter(e => e.tipus === "aparellada");
-  const question = id => w.survey.preguntes.find(q => q.id === id)?.que_mesura || id;
+  const question = id => resultQuestionTitle(w, id, w.survey.preguntes.find(q => q.id === id)?.que_mesura || id);
 
   return `<section class="panel section" aria-labelledby="results-comparisons">
     <h2 id="results-comparisons">Evolució entre onades</h2>
@@ -784,7 +815,11 @@ function resultComparisons(w) {
             const e = paired.find(e => e.pregunta_id === m.id);
             return `<div class="action-evidence"><strong>${esc(question(m.id))}</strong>
               <div>Base aparellada: ${num(m.n)} · Pèrdues de seguiment: ${num(m.perdues)}</div>
-              ${e ? `<div>${num(e.transicions.puja)} pugen · ${num(e.transicions.igual)} es mantenen · ${num(e.transicions.baixa)} baixen</div>`
+              ${e ? `<div class="results-chart-list results-paired-bars">
+                ${resultBarRow("Pugen", e.transicions.puja, e.base, num(e.transicions.puja))}
+                ${resultBarRow("Es mantenen", e.transicions.igual, e.base, num(e.transicions.igual), "bar-neutral")}
+                ${resultBarRow("Baixen", e.transicions.baixa, e.base, num(e.transicions.baixa), "bar-gold")}
+              </div>`
                 : m.delta != null ? `<div>Canvi mitjà: ${num(m.delta)} punts d’escala</div>` : "<div>Dades insuficients per publicar el canvi.</div>"}
             </div>`;
           }).join("")}
@@ -793,7 +828,7 @@ function resultComparisons(w) {
   </section>`;
 }
 
-function evidenceCard(e) {
+function evidenceCard(e, w = current) {
   const source = Array.isArray(e.origen) ? e.origen.map(o => responseSources[o] ?? o).join(", ") : e.origen;
   const scope = e.public && [e.public.sector, e.public.ubicacio, e.public.torn].join(" · ");
   let values = "";
@@ -807,7 +842,7 @@ function evidenceCard(e) {
       `${resultPeriod(wave.periode)} · ${num(e.favorables[i], "%")} favorable (n=${e.bases[i]})`).join(" → ");
   if (e.transicions)
     values += ` · ${e.transicions.puja} pugen, ${e.transicions.igual} iguals, ${e.transicions.baixa} baixen`;
-  return `<div class="action-evidence"><strong>${esc(e.titol || e.pregunta || "Evidència de l’onada")}</strong>
+  return `<div class="action-evidence"><strong>${esc(resultQuestionTitle(w, e.pregunta_id, e.titol || e.pregunta || "Evidència de l’onada"))}</strong>
     <div>${esc(values)}</div><small>${esc([scope, e.onades && e.tipus === "aparellada" ?
       e.onades.map(wave => resultPeriod(wave.periode)).join(" / ") : e.onades ? "" : resultPeriod(e.periode), source].filter(Boolean).join(" · "))}</small>
     <p><small>${esc(e.text_base)} ${esc(e.limitacio)}</small></p></div>`;
@@ -818,27 +853,22 @@ function historicalEvidence(d) {
 }
 const analysisButton = (w, action, label, disabled = false) =>
   `<button class="btn" data-analysis="${action}" data-wave="${esc(w.id)}" ${disabled ? 'disabled data-unavailable="true"' : ""}>${label}</button>`;
-function analysisControls(w, onResults = false) {
+const analysisInProgress = w => ["pending", "running"].includes(w.analysis?.automatic);
+function analysisControls(w) {
   const base = w.results.informe_base;
   if (!w.analysis || !base) return "";
-  const { tema, informe } = w.analysis;
+  const { tema, informe, automatic } = w.analysis;
+  if (analysisInProgress(w)) return '<p role="status" class="results-analysis-progress">L’anàlisi amb IA està en curs. Els resultats numèrics ja estan disponibles.</p>';
+  if (automatic === "failed") return `<div class="results-analysis-progress"><p>L’anàlisi amb IA no s’ha pogut completar.</p>
+    ${analysisButton(w, "analysis-retry", "Reintentar l’anàlisi", !session.integrations.analysis)}</div>`;
+  if (automatic) return "";
   const ready = session.integrations.analysis;
+  const label = session.scenario_a ? "Anàlisi amb Groq simulat" : "Anàlisi amb Groq";
+  const reviewLabel = session.scenario_a ? "Revisar l’informe simulat" : "Revisar l’informe de Groq";
   const canGenerate = ready && !!(base.evidencies.length || base.diagnostic_biaixos.length);
-  if (onResults) {
-    return `<section class="results-analysis-status" aria-label="Anàlisi amb Groq">
-      <span class="results-glyph">${icon("wave")}</span>
-      <div><h3>Anàlisi amb Groq</h3><p>${informe === "pendent"
-        ? "Esborrany pendent de revisió per People."
-        : !ready ? "Configura Groq a Integracions per generar l’anàlisi."
-        : ["disponible", "pendent"].includes(tema)
-          ? "Si generes l’informe ara, només s’hi inclouran temes ja revisats."
-          : "Les interpretacions es mostren després de la revisió de People."}</p></div>
-      ${informe === "pendent" ? analysisButton(w, "analysis-review", "Revisar l’informe de Groq") :
-        analysisButton(w, "proposals", "Generar anàlisi i accions", !canGenerate)}
-    </section>`;
-  }
+  if (informe === "revisat") return "";
   return `<section class="panel section">
-    <h2>Anàlisi amb Groq</h2>
+    <h2>${label}</h2>
     ${!ready && informe === "disponible" ? "<p>Configura Groq a Integracions per generar l’anàlisi.</p>" : ""}
     ${informe === "disponible" ? `<p>People revisa l’evidència i cada bloc abans que aparegui als resultats.
       ${["disponible", "pendent"].includes(tema) ? "Si generes l’informe ara, només s’hi inclouran temes ja revisats." : ""}</p>` : ""}
@@ -846,94 +876,149 @@ function analysisControls(w, onResults = false) {
       ${tema === "disponible" ? analysisButton(w, "themes", "Descobrir temes amb Groq", !ready) : ""}
       ${tema === "pendent" ? analysisButton(w, "theme-review", "Revisar suports dels temes") : ""}
       ${informe === "disponible" ? analysisButton(w, "proposals", "Generar anàlisi i accions", !canGenerate) : ""}
-      ${informe === "pendent" ? analysisButton(w, "analysis-review", "Revisar l’informe de Groq") : ""}
+      ${informe === "pendent" ? analysisButton(w, "analysis-review", reviewLabel) : ""}
     </div>
-    ${informe === "revisat" ? "<p>Revisió de l’informe desada.</p>" : ""}
     ${informe === "pendent" ? "<p>Esborrany pendent de revisió per People.</p>" : ""}
   </section>`;
 }
+function findingReasoning(t) {
+  return `${t.hipotesi ? `<p><strong>Hipòtesi</strong><br>${esc(t.hipotesi)}</p>` : ""}
+    ${t.comprovacio ? `<p><strong>Com comprovar-ho</strong><br>${esc(t.comprovacio)}</p>` : ""}
+    <p class="muted">${esc(t.limitacio)}</p>`;
+}
 function analysisResults(w) {
   const base = w.results.informe_base;
-  const approved = w.results.informe;
-  const historic = base?.diagnostic_biaixos ?? w.diagnostic ?? [];
-  const historicChart = w.results.historic;
-  return `${approved ? `<section class="panel section" aria-labelledby="results-findings">
-      <p class="results-kicker">Groq · Revisat per People</p><h2 id="results-findings">Què ens diuen els resultats?</h2>
-      ${approved.troballes.length ? `<div class="results-findings">
-        ${approved.troballes.map(t => `<article class="results-finding">
-          <h3>${esc(t.text)}</h3><p class="muted">${esc(t.limitacio)}</p>
-          ${base.evidencies.filter(e => t.evidencia_ids.includes(e.id)).map(evidenceCard).join("")}
-        </article>`).join("")}
-      </div>` : "<p>People ha tancat la revisió sense aprovar cap interpretació.</p>"}
+  const report = w.results.informe;
+  return `${report ? `<section class="panel section" aria-labelledby="results-findings">
+      <p class="results-kicker">${w.analysis?.automatic ? "Interpretació amb IA" : "Revisat per People"}</p><h3 id="results-findings">Què ens diuen els resultats?</h3>
+      ${report.troballes.length ? `<div class="results-findings">
+        ${report.troballes.map(t => {
+          const sources = base.evidencies.filter(e => t.evidencia_ids.includes(e.id));
+          const labels = sources.map(e => resultQuestionLabel(w, e.pregunta_id) || e.titol || "Evidència de l’onada");
+          return `<article class="results-finding">
+            <p class="results-kicker">${esc([...new Set(labels)].join(" · "))}</p>
+            <h4>${esc(t.text)}</h4>${findingReasoning(t)}
+          </article>`;
+        }).join("")}
+      </div>` : "<p>No hi ha interpretacions publicables.</p>"}
     </section>
-    ${w.followup || w.proposals.length ? `<section class="panel section" aria-labelledby="results-next">
-      <h2 id="results-next">Accions i seguiment</h2>
-      ${w.followup ? `<p>${esc(w.selected_action?.titol || "Seguiment preparat")}</p>
-        <a class="btn" href="#campaign/${esc(w.followup)}/survey">Obrir la consulta de seguiment ${icon("arrow")}</a>` : ""}
-      ${w.proposals.map(p => `<article class="action-card results-action">
-        ${actionDetails(p, base)}
-        ${w.followup ? "" : `<button class="btn" data-follow="${esc(p.accio_id)}" data-wave="${esc(w.id)}">Escollir acció i crear seguiment ${icon("arrow")}</button>`}
-      </article>`).join("")}
+    ${w.followup || w.proposals.length ? `<section class="panel action-plans" aria-labelledby="results-next">
+      <h2 id="results-next">Accions i seguiment</h2>${campaignActionPlans(w)}
     </section>` : ""}` : ""}
-    ${historic.length ? `<details class="panel section results-details">
-      <summary>Context històric del sondeig</summary>
-      <p class="muted">El sondeig de setembre ajuda a valorar el risc d’autoselecció de la mostra actual.</p>
-      ${historic.map(historicalEvidence).join("")}
-      ${historicChart?.percentatges ? distributionChart(historicChart) : ""}
-    </details>` : ""}
     ${base?.evidencies.length ? `<details class="panel section results-details">
       <summary>Totes les fitxes d’evidència</summary>
-      ${base.evidencies.map(evidenceCard).join("")}
+      ${base.evidencies.map(e => evidenceCard(e, w)).join("")}
     </details>` : ""}`;
 }
-function actionDetails(a, base) {
-  if (!a.seguiment) {
-    return `<h3>${esc(a.accio_id)}</h3><p>${esc(a.motiu)}</p><small>${esc(a.origen)}</small>`;
+const catalogActionCopy = {
+  instruccions: {
+    titol: "Unificar les instruccions de torn",
+    objectiu: "Facilitar que la plantilla entengui la rotació i trobi les instruccions vigents.",
+    primer_pas: "Publica un únic resum i presenta’l a l’inici de cada torn.",
+    rol_suggerit: "Supervisió de Planta",
+  },
+  ajuda: {
+    titol: "Fer visible el canal d’ajuda",
+    objectiu: "Que la plantilla sàpiga a qui adreçar els dubtes de torn.",
+    primer_pas: "Comparteix el contacte amb els dos torns i explica quan i com utilitzar-lo.",
+    rol_suggerit: "People i Supervisió",
+  },
+  antelacio: {
+    titol: "Compartir el calendari amb antelació",
+    objectiu: "Donar temps a la plantilla per organitzar-se abans d’un canvi de torn.",
+    primer_pas: "Acorda amb planificació quan es farà públic el quadrant i per quin canal.",
+    rol_suggerit: "Planificació de Planta",
+  },
+};
+function actionSignal(e, w) {
+  const questionId = e.pregunta_id ?? (e.id === "dificultat_funcionament" ? "dificultat_principal" : null);
+  const label = resultQuestionLabel(w, questionId);
+  const title = e.titol || (e.favorable != null ? e.que_mesura : e.text || e.que_mesura) || e.pregunta;
+  let values = "";
+  if (e.favorable != null) values = `${num(e.favorable, "%")} favorable · ${num(e.base)} respostes`;
+  else if (e.n != null && e.base != null) {
+    const unit = e.tipus === "tema" ? "comentaris analitzables" : e.tema ? "textos analitzables" : "respostes";
+    values = `${num(e.n)} de ${num(e.base)} ${unit}`;
+  } else if (e.tipus === "cobertura")
+    values = `${num(e.pes_mostra, "%")} de la mostra · ${num(e.pes_poblacio, "%")} del públic`;
+  else if (e.opcions?.length) values = `${num(e.base)} ${e.base_unitat}`;
+  return `<li>${label ? `<span class="action-question">${label}</span>` : ""}
+    <span>${esc([title, values].filter(Boolean).join(" · "))}</span></li>`;
+}
+function actionDetails(a, base, w = current) {
+  const evidence = a.evidence ?? a.evidencia ?? (base?.evidencies ?? w.results?.evidence ?? [])
+    .filter(e => a.evidencia_ids?.includes(e.id));
+  const diagnostics = a.diagnostic ?? base?.diagnostic_biaixos.filter(d => a.diagnostic_ids?.includes(d.id)) ?? [];
+  const follow = a.seguiment;
+  const baseline = follow?.pregunta_impacte_id && base?.evidencies.find(e =>
+    e.pregunta_id === follow.pregunta_impacte_id && e.tipus === "escala_1_5" && e.favorable != null);
+  const role = a.rol_suggerit || a.responsable;
+  const implementation = a.primer_pas || a.descripcio;
+  return `<header class="action-plan-head">
+    ${a.tipus === "recollida" ? '<p class="action-plan-meta">Millora de la recollida</p>' : ""}
+    <h3>${esc(a.titol || a.accio_id)}</h3>
+  </header>
+  <dl class="action-plan-case">
+    ${a.objectiu ? `<div><dt>Objectiu</dt><dd>${esc(a.objectiu)}</dd></div>` : ""}
+    ${a.justificacio || a.motiu || evidence.length || diagnostics.length ? `<div><dt>Per què aquesta acció</dt>
+      <dd>${a.justificacio || a.motiu ? `<p>${esc(a.justificacio || a.motiu)}</p>` : ""}
+      ${evidence.length || diagnostics.length ? `<ul class="action-plan-signals" role="list">
+        ${evidence.map(e => actionSignal(e, w)).join("")}
+        ${diagnostics.map(d => `<li><span>${esc(d.titol)} · Sondeig històric</span></li>`).join("")}
+      </ul>` : ""}</dd></div>` : ""}
+  </dl>
+  ${implementation || follow ? `<div class="action-roadmap">
+    <h4>Pla d’implementació i seguiment</h4>
+    <ol class="action-roadmap-steps" role="list">
+      ${implementation ? `<li><h5>Aplicar l’acció</h5>
+        ${role || a.quan ? `<p class="action-plan-meta">${[role, a.quan].filter(Boolean).map(esc).join(" · ")}</p>` : ""}
+        <p>${esc(implementation)}</p></li>` : ""}
+      ${follow ? `<li><h5>Comprovar si ha arribat</h5>
+        ${follow.quan ? `<p class="action-plan-meta">${esc(follow.quan)}</p>` : ""}
+        <p>${esc(follow.pregunta_adaptable)}</p>
+        ${follow.opcions_suggerides?.length ? `<details><summary>Opcions de resposta</summary><p>${follow.opcions_suggerides.map(esc).join(" · ")}</p></details>` : ""}
+      </li>
+      ${follow.criteri_impacte ? `<li><h5>Mesurar el canvi</h5>
+        ${baseline ? `<p class="action-plan-baseline"><span class="action-question">${esc(resultQuestionLabel(w, baseline.pregunta_id))}</span>
+          ${num(baseline.favorable, "%")} favorable a l’onada de partida · ${num(baseline.base)} respostes</p>` : ""}
+        <p>${esc(follow.criteri_impacte)}</p>
+      </li>` : ""}` : ""}
+    </ol>
+  </div>` : ""}`;
+}
+function campaignActionPlans(w) {
+  const base = w.results?.informe_base;
+  if (w.followup) {
+    const a = w.selected_action;
+    const simulation = w.source === "simulation";
+    const selected = simulation && a ? {
+      ...catalogActionCopy.instruccions, ...a, primer_pas: a.descripcio,
+      seguiment: {
+        pregunta_adaptable: "T’ha arribat el resum sobre el nou sistema de torns?",
+        criteri_impacte: "Compara la comprensió de la rotació i el coneixement del canal d’ajuda a les onades simulades.",
+      },
+    } : a && { ...catalogActionCopy[a.id], ...a };
+    return `<article class="action-plan">
+      <p class="action-plan-meta">${simulation ? "Acció simulada" : "Acció escollida per People"}</p>
+      ${selected ? actionDetails(selected, base, w) : ""}
+      <a class="btn btn-primary" href="#campaign/${esc(w.followup)}/${simulation ? "results" : "survey"}">${simulation ? "Veure resultats del seguiment" : "Obrir la consulta de seguiment"} ${icon("arrow")}</a>
+    </article>`;
   }
-  return `<small>${a.tipus === "canvi" ? "Acció de canvi" : "Acció de recollida"}</small>
-    <h3>${esc(a.titol)}</h3><p>${esc(a.primer_pas)}</p>
-    <p><small>${esc(a.rol_suggerit)} · ${esc(a.quan)}</small></p>
-    ${base.evidencies.filter(e => a.evidencia_ids.includes(e.id)).map(evidenceCard).join("")}
-    ${base.diagnostic_biaixos.filter(d => a.diagnostic_ids.includes(d.id)).map(historicalEvidence).join("")}
-    <p><strong>Seguiment</strong> · ${esc(a.seguiment.quan)}<br>${esc(a.seguiment.pregunta_adaptable)}<br>
-      <small>${a.seguiment.opcions_suggerides.map(esc).join(" · ")}</small></p>`;
+  return w.proposals.map(p => `<article class="action-plan">
+    ${actionDetails({ ...catalogActionCopy[p.accio_id], ...p }, base, w)}
+    <button class="btn" data-follow="${esc(p.accio_id)}" data-wave="${esc(w.id)}">Escollir acció i crear seguiment ${icon("arrow")}</button>
+  </article>`).join("");
 }
 function actionView(w = current) {
-  if (w.source === "simulation") {
-    const a = w.selected_action;
-    if (!a) return `<section class="panel section"><h3>Última onada de la simulació</h3><a class="text-link" href="#campaign/${w.id}/results">Veure evolució ${icon("arrow")}</a></section>`;
-    return `<section class="panel section"><div class="eyebrow">ACCIÓ SIMULADA · ETAPA 03</div>
-      <h3>${esc(a.titol)}</h3><p>${esc(a.descripcio)}</p>
-      ${a.evidence.map((e) => `<p><strong>${num(e.n)} de ${num(e.base)} respostes</strong> assenyalen entendre el funcionament com a dificultat principal.</p>`).join("")}
-      <p><small>Rol responsable · ${esc(a.responsable)}</small></p>
-      <a class="btn btn-primary" href="#campaign/${w.followup}/results">Veure resultats del seguiment ${icon("arrow")}</a></section>`;
-  }
-  const actions = {
-    instruccions: [
-      "Un únic lloc per a les instruccions",
-      "Centralitzar les instruccions i presentar-ne un resum a l’inici de cada torn.",
-      "Supervisió de Planta",
-    ],
-    ajuda: [
-      "Fer visible el canal d’ajuda",
-      "Compartir un punt de contacte de suport i explicar quan i com utilitzar-lo.",
-      "People i Supervisió",
-    ],
-    antelacio: [
-      "Compartir el calendari amb antelació",
-      "Acordar una finestra estable per comunicar el calendari als dos torns.",
-      "Planificació de Planta",
-    ],
-  };
-  if (w.followup)
-    return `<section class="panel section">${notice("People ha seleccionat una acció. El seguiment està vinculat a l’evidència original.", "success")}<h2>${esc(w.selected_action?.titol || "Seguiment preparat")}</h2><p>${esc(w.selected_action?.descripcio || "")}</p><a class="btn btn-primary" href="#campaign/${w.followup}/survey">Obrir la consulta de seguiment ${icon("arrow")}</a></section>`;
-  if (w.analysis) return `${analysisControls(w)}<section class="panel">
-    <div class="panel-head"><h2>${w.results.informe ? "Propostes d’acció revisades" : "Propostes d’acció"}</h2></div>
-    ${w.proposals.length ? w.proposals.map(p => `<article class="action-card">
-      ${actionDetails(p, w.results.informe_base)}
-      <button class="btn" data-follow="${esc(p.accio_id)}" data-wave="${esc(w.id)}">Escollir acció i crear seguiment ${icon("arrow")}</button></article>`).join("")
-      : empty("Encara no hi ha propostes aprovades", "Cal evidència publicable i una revisió de People.")}</section>`;
-  return `<section class="panel"><div class="panel-head"><div><h2>Propostes d’acció</h2><p>${session.mode === "demo" ? "Propostes de regles locals" : "Propostes IA vinculades a evidència agregada"}</p></div>${session.mode !== "demo" && w === current && w.state === "closed" && session.integrations.llm && w.results.evidence.length ? '<button class="btn" data-act="proposals">Generar propostes amb IA</button>' : ""}</div>${w.proposals.length ? w.proposals.map((p) => `<article class="action-card"><small>${esc(p.origen)}</small><h3>${esc(actions[p.accio_id]?.[0] || p.accio_id)}</h3><p>${esc(actions[p.accio_id]?.[1] || "")}</p><div class="action-evidence">${icon("chart")} ${esc(p.motiu)}<br><small>Evidència: ${p.evidencia_ids.map(esc).join(", ")} · Onada actual</small></div><p><small>Rol suggerit: ${esc(actions[p.accio_id]?.[2] || "People")}</small></p><button class="btn" data-follow="${esc(p.accio_id)}" data-wave="${w.id}">Escollir acció i crear seguiment ${icon("arrow")}</button></article>`).join("") : empty("Encara no hi ha propostes", "Calen resultats publicables.")}</section>`;
+  if (w.source === "simulation" && !w.followup)
+    return `<section class="panel section"><h3>Última onada de la simulació</h3><a class="text-link" href="#campaign/${esc(w.id)}/results">Veure evolució ${icon("arrow")}</a></section>`;
+  const canGenerate = !w.analysis && session.mode !== "demo" && w === current && w.state === "closed" &&
+    session.integrations.llm && w.results.evidence.length;
+  return `${w.analysis && !w.followup ? analysisControls(w) : ""}<section class="panel action-plans">
+    <h2>${w.followup ? "Pla de seguiment" : w.analysis?.informe === "revisat" ? "Propostes d’acció revisades" : "Propostes d’acció"}</h2>
+    ${canGenerate ? '<button class="btn" data-act="proposals">Generar propostes amb IA</button>' : ""}
+    ${w.followup || w.proposals.length ? campaignActionPlans(w)
+      : empty("Encara no hi ha propostes", "Les propostes es basen en evidència publicable.")}</section>`;
 }
 async function allActions() {
   const completed = await Promise.all(
@@ -975,16 +1060,14 @@ function settings() {
   );
 }
 function presentationView() {
-  // Embedded so already-running demo servers can display the slide after a reload.
   const slide = "/presentacio-acte-1.png";
   const fullscreenControl = document.fullscreenEnabled
     ? `<button class="btn" type="button" id="open-presentation" data-act="presentation-fullscreen">${icon("fullscreen")}Pantalla completa</button>`
     : `<a class="btn" href="${slide}">${icon("fullscreen")}Veure a mida completa</a>`;
-  shell(
-    `<header class="page-head presentation-head">
+  const content = `<header class="page-head presentation-head">
       <h1>Presentació</h1>
       <div class="presentation-controls">${fullscreenControl}
-        <button class="btn btn-primary" type="button" data-act="new">Nova consulta ${icon("arrow")}</button>
+        ${session?.authenticated ? `<button class="btn btn-primary" type="button" data-act="new">Nova consulta ${icon("arrow")}</button>` : ""}
       </div>
     </header>
     <figure class="presentation-stage" id="presentation-stage">
@@ -992,18 +1075,66 @@ function presentationView() {
       <img src="${slide}" width="2560" height="1440" alt="Escoltamm. Distribució de les puntuacions en un sondeig simulat: els extrems (1 i 5) passen del 17,3% a la referència completa (600 respostes) al 37,9% a la consulta voluntària per QR (240 respostes). Són 20,6 punts percentuals més, un senyal de possible biaix d’autoselecció.">
       </a>
       <button class="btn presentation-exit" type="button" data-act="presentation-exit" aria-label="Sortir de la pantalla completa" title="Sortir de la pantalla completa">${icon("close")}</button>
-    </figure>`,
-    "presentation",
-    "Presentació",
-  );
+    </figure>`;
+  if (session?.authenticated) shell(content, "presentation", "Presentació");
+  else app.innerHTML = `<main id="main" class="content">${content}</main>`;
+  if (document.fullscreenElement) $(".presentation-next").focus({ preventScroll: true });
+}
+function presentationCover() {
+  app.innerHTML = `<main id="main" class="presentation-cover">
+    <svg class="cover-filter" aria-hidden="true"><filter id="cover-white" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  3 -3 0 0 0"/><feComponentTransfer><feFuncA type="linear" slope="6" intercept="-4"/></feComponentTransfer></filter><filter id="cover-gold" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .835  0 0 0 0 .678  0 0 0 0 .333  0 4 -4 0 0"/><feComponentTransfer><feFuncA type="linear" slope="6" intercept="-4"/></feComponentTransfer></filter></svg>
+    <a class="presentation-cover-link" href="#presentation" aria-label="Començar la presentació"><span class="presentation-cover-logo"><img src="/escoltamm-logo.png" alt="Escoltamm"><img class="cover-gold" src="/escoltamm-logo.png" alt="" aria-hidden="true"></span></a>
+    <video class="presentation-intro" src="/presentacio-intro.mp4" preload="auto" playsinline disablepictureinpicture disableremoteplayback hidden></video>
+  </main>`;
+  const cover = $(".presentation-cover-link");
+  const video = $(".presentation-intro");
+  const finish = () => {
+    if (video.isConnected) location.hash = "presentation";
+  };
+  let started = false;
+  cover.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (started) return;
+    started = true;
+
+    video.addEventListener("playing", () => {
+      video.hidden = false;
+      cover.remove();
+    }, { once: true });
+    video.addEventListener("ended", finish, { once: true });
+    video.addEventListener("error", finish, { once: true });
+
+    // Keep the root fullscreen when the video is replaced by the slide.
+    const playback = video.play();
+    if (document.fullscreenEnabled && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+    playback.catch(finish);
+  });
+}
+let analysisPoll;
+function watchAnalysis(id, hash) {
+  analysisPoll = setTimeout(async () => {
+    if (location.hash !== hash || !session?.authenticated) return;
+    try {
+      const wave = await api(`/api/campaigns/${encodeURIComponent(id)}`);
+      if (location.hash !== hash) return;
+      if (analysisInProgress(wave)) watchAnalysis(id, hash);
+      else await route();
+    } catch {
+      if (location.hash === hash && session?.authenticated) watchAnalysis(id, hash);
+    }
+  }, 1500);
 }
 async function route() {
-  if (!location.hash || location.hash === "#inici") {
-    app.innerHTML = `<main id="main" class="presentation-cover"><svg class="cover-filter" aria-hidden="true"><filter id="cover-white" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  3 -3 0 0 0"/><feComponentTransfer><feFuncA type="linear" slope="6" intercept="-4"/></feComponentTransfer></filter><filter id="cover-gold" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .835  0 0 0 0 .678  0 0 0 0 .333  0 4 -4 0 0"/><feComponentTransfer><feFuncA type="linear" slope="6" intercept="-4"/></feComponentTransfer></filter></svg><a class="presentation-cover-link" href="#presentation" aria-label="Començar la presentació"><span class="presentation-cover-logo"><img src="/escoltamm-logo.png" alt="Escoltamm"><img class="cover-gold" src="/escoltamm-logo.png" alt="" aria-hidden="true"></span></a></main>`;
-    return;
+  clearTimeout(analysisPoll);
+  if (location.hash === "#presentation") return presentationView();
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
   }
+  if (!location.hash || location.hash === "#inici") return presentationCover();
   if (!session?.authenticated) return renderLogin();
-  const hash = location.hash.slice(1) || "overview";
+  const hash = location.hash.slice(1);
   try {
     campaigns = (await api("/api/campaigns")).campaigns;
     if (hash.startsWith("campaign/")) {
@@ -1022,8 +1153,8 @@ async function route() {
           action: actionView,
         }[tab](),
       );
-    } else if (hash === "presentation") presentationView();
-    else if (hash === "campaigns") campaignList();
+      if (["results", "action"].includes(tab) && analysisInProgress(current)) watchAnalysis(id, location.hash);
+    } else if (hash === "campaigns") campaignList();
     else if (hash === "calibration") await calibration();
     else if (hash === "actions") await allActions();
     else if (hash === "settings") settings();
@@ -1042,10 +1173,11 @@ function showDialog(title, body) {
   dialog.showModal();
 }
 function needForm(edit = false) {
-  const c = edit ? current.config : null;
+  const preset = session.scenario_a?.defaults;
+  const c = edit ? current.config : preset ? { ...preset, public: preset } : null;
   showDialog(
     edit ? "Editar la necessitat" : "Nova consulta",
-    `<form id="need-form" data-edit="${edit}"><div class="form-grid">${[
+    `<form id="need-form" data-edit="${edit}">${!edit && preset ? '<p class="muted">Escenari A · Canvi de torns a la planta. Pots editar tots els camps.</p>' : ""}<div class="form-grid">${[
       ["titol", "Nom de la campanya", c?.titol || ""],
       [
         "objectiu",
@@ -1073,7 +1205,7 @@ function needForm(edit = false) {
       )
       .join(
         "",
-      )}</select></div><div class="field"><label for="new-shift">Torn</label><select id="new-shift" name="torn">${["Tots dos", "Dia", "Nit"].map((s) => `<option ${s === c?.public.torn ? "selected" : ""}>${s}</option>`).join("")}</select></div><div class="field"><label for="new-days">Dies de recollida</label><input id="new-days" name="dies" type="number" min="1" max="30" value="${c?.dies || 7}" required></div><div class="field"><label for="new-exclusions">Temes exclosos</label><input id="new-exclusions" name="exclusions" value="${esc(c?.exclusions || "Dades que identifiquin persones")}"></div></div><p id="need-error" class="error-text" role="alert"></p><div class="form-actions"><button class="btn" type="button" data-act="dismiss">Cancel·lar</button><button class="btn btn-primary" type="submit">${edit ? "Desar i tornar a esborrany" : "Crear esborrany"} ${icon("arrow")}</button>${!edit && session.integrations.llm ? '<button class="btn btn-primary" type="submit" data-generate>Generar amb IA</button>' : ""}</div></form>`,
+      )}</select></div><div class="field"><label for="new-shift">Torn</label><select id="new-shift" name="torn">${["Tots dos", "Dia", "Nit"].map((s) => `<option ${s === c?.public.torn ? "selected" : ""}>${s}</option>`).join("")}</select></div><div class="field"><label for="new-days">Dies de recollida</label><input id="new-days" name="dies" type="number" min="1" max="30" value="${c?.dies || 7}" required></div><div class="field"><label for="new-exclusions">Temes exclosos</label><input id="new-exclusions" name="exclusions" value="${esc(c?.exclusions || "Dades que identifiquin persones")}"></div></div><p id="need-error" class="error-text" role="alert"></p><div class="form-actions"><button class="btn" type="button" data-act="dismiss">Cancel·lar</button><button class="btn ${!edit && preset ? "" : "btn-primary"}" type="submit">${edit ? "Desar i tornar a esborrany" : "Crear esborrany"} ${icon("arrow")}</button>${!edit && session.integrations.llm ? `<button class="btn btn-primary" type="submit" data-generate>${preset ? "Simular crida a Groq" : "Generar amb IA"}</button>` : ""}</div></form>`,
   );
 }
 async function refreshDetail() {
@@ -1091,16 +1223,20 @@ function showAnalysisReview(path, action, data) {
           `<small>${v.estat === "contradiu" ? "El text contradiu el tema." : "Suport indeterminat."}</small>`}</div>`).join("")}
       </fieldset>`).join("")
     : `${data.draft.troballes.map(t => `<article class="action-card"><h3>Interpretació</h3>
-      <p>${esc(t.text)}</p><p><small>${esc(t.limitacio)}</small></p>
-      ${data.base.evidencies.filter(e => t.evidencia_ids.includes(e.id)).map(evidenceCard).join("")}
+      <p>${esc(t.text)}</p>${findingReasoning(t)}
+      ${data.base.evidencies.filter(e => t.evidencia_ids.includes(e.id)).map(e => evidenceCard(e)).join("")}
       ${checkbox("troballes", t.id, "Aprovar aquesta interpretació")}</article>`).join("")}
-      ${data.draft.accions.map(a => `<article class="action-card">${actionDetails(a, data.base)}
+      ${data.draft.accions.map(a => `<article class="action-card action-plan action-review">${actionDetails(a, data.base)}
+        <details><summary>Fitxes d’evidència</summary>
+          ${data.base.evidencies.filter(e => a.evidencia_ids.includes(e.id)).map(e => evidenceCard(e)).join("")}
+          ${data.base.diagnostic_biaixos.filter(d => a.diagnostic_ids.includes(d.id)).map(historicalEvidence).join("")}
+        </details>
         ${checkbox("accions", a.id, "Aprovar aquesta proposta per valorar-la")}</article>`).join("")}`;
   showDialog(isTheme ? "Revisió dels suports" : "Revisió de l’anàlisi", `<form id="analysis-review-form">
     <p>${isTheme ? "Marca cada suport només si el fragment i el text complet sustenten el títol i la definició del tema. El servidor comprova la base i els complements abans de publicar." :
       "Comprova el significat, l’abast de l’evidència i la relació amb l’objectiu. Només es publicaran els blocs marcats."}</p>
     ${!isTheme && data.draft.descartats ? "<p>El servidor ha descartat blocs amb referències o contingut invàlids.</p>" : ""}
-    ${content.trim() ? content : "<p>Groq no ha proposat cap bloc per revisar.</p>"}
+    ${content.trim() ? content : "<p>El model no ha proposat cap bloc per revisar.</p>"}
     <div class="form-actions"><button type="button" class="btn" data-act="dismiss">Tornar</button>
       <button class="btn btn-primary" type="submit">Desar la revisió</button></div></form>`);
   $("#analysis-review-form").addEventListener("submit", event => {
@@ -1126,7 +1262,8 @@ function handleAnalysis(button) {
       return;
     }
     await api(`${path}/${action}`, {});
-    toast(action === "themes" ? "Temes preparats per revisar." : "Informe preparat per revisar.");
+    if (action !== "analysis-retry")
+      toast(action === "themes" ? "Temes preparats per revisar." : "Informe preparat per revisar.");
     await refreshDetail();
   });
 }
@@ -1265,7 +1402,8 @@ async function action(name, button) {
           generate: "Esborrany generat i validat.",
         }[name],
       );
-      if (name === "generate" && tab !== "survey") location.hash = `campaign/${current.id}/survey`;
+      if (name === "publish" && session.scenario_a && tab !== "share") location.hash = `campaign/${current.id}/share`;
+      else if (name === "generate" && tab !== "survey") location.hash = `campaign/${current.id}/survey`;
       else await refreshDetail();
     }
   });
@@ -1375,7 +1513,8 @@ document.addEventListener("submit", (event) => {
   const form = event.target;
   if (!["login-form", "need-form", "json-form"].includes(form.id)) return;
   event.preventDefault();
-  const button = form.querySelector("button[type=submit],button:not([type])");
+  if (form.querySelector('button[aria-busy="true"]')) return;
+  const button = event.submitter || form.querySelector("button[type=submit],button:not([type])");
   run(button, async () => {
     try {
       if (form.id === "login-form") {
@@ -1550,14 +1689,6 @@ document.addEventListener("submit", (event) => {
 });
 window.addEventListener("hashchange", () => {
   if (!location.pathname.startsWith("/participa/")) route();
-});
-document.addEventListener("click", (event) => {
-  if (event.target.closest(".presentation-cover-link") && document.fullscreenEnabled && !document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
-  }
-  if (event.target.closest(".presentation-next") && document.fullscreenElement) {
-    document.exitFullscreen().catch(() => {});
-  }
 });
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement) $("#open-presentation")?.focus();

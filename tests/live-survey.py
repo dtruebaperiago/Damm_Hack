@@ -41,7 +41,7 @@ with sync_playwright() as p:
   expect(page.get_by_role('heading',name='Encara no hi ha preguntes')).to_be_visible()
   assert page.locator('[data-act=approve]').count()==0
   page.screenshot(path=str(OUT/'empty-survey.png'),full_page=True)
-  page.get_by_role('button',name='Generar amb IA real').click()
+  page.get_by_role('button',name='Generar amb IA').click()
   expect(page.locator('.question').first).to_be_visible(timeout=60000)
  draft=page.request.get(BASE+'/api/campaigns/'+campaign).json()
  assert draft['state']=='draft' and not draft['published']
