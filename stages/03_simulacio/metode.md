@@ -40,7 +40,8 @@ Amb la llavor de demo, `funcionament` és la dificultat triada en 68 de les 181 
 
 - [Gràfic del seguiment](output/seguiment-kpi.png) i [gràfic de la calibració de setembre](output/calibracio-setembre.png) per a la presentació.
 - [KPI per onada](output/kpi_onades.csv), [comparacions en punts percentuals](output/comparacions_kpi.csv) i [resum històric](output/calibracio_resum.json) per al dashboard. El resum històric inclou els estats esperats dels casos de denominador absent i tall protegit.
-- [Metadades d’onades](output/prova_onades.csv) i [trameses de prova](output/prova_trameses.csv) per precarregar el prototip. Filtra per `escenari` i `campanya_id`. El `response_id` serveix per deduplicar la importació. Són mostres precarregades amb origen `sintetic`.
+- [Metadades d’onades](output/prova_onades.csv) i [trameses de prova](output/prova_trameses.csv) per reproduir els agregats. Filtra per `escenari` i `campanya_id`. El càlcul deduplica les trameses per `response_id` dins de cada onada.
+- [Agregats per a la web](output/demo_web.json) per precarregar les sis onades tancades. La web llegeix aquest fitxer, la calibració separada i el qüestionari base. Si regeneres les dades, usa una base nova per visualitzar les noves instantànies.
 - [Població de setembre](output/calibracio_poblacio.csv) i [respostes de la calibració](output/calibracio_respostes.csv) per reproduir els agregats històrics. El `recollida_id` separa els formularis.
 
 Els CSV fan servir comes com a separador i punt decimal. Les files individuals són fixtures per a proves del prototip. Per al jurat, mostra els agregats i identifica qualsevol tramesa de Typeform que arribi en directe amb el seu origen propi.

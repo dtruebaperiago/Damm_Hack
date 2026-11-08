@@ -10,6 +10,7 @@ status: pendent-de-revisio-de-lequip
 - Recomptes de setembre i regles de comparació · `../../.plans/escolta-activa-damm-spec.md` (apartats de sondeig i comparabilitat)
 - Ítems i bases de càlcul · `../02_model-logic/output/plantilla-microconsulta.md` (apartats 4 i 5)
 - Abast del codi de participació · `../../docs/adr/0001-abast-del-codi-de-participacio.md`
+- Qüestionari base de la demo web · `consulta.json`
 
 ## Procés
 
@@ -20,6 +21,7 @@ status: pendent-de-revisio-de-lequip
 ## Sortida
 
 - `output/` conté els CSV de prova, els agregats publicables, el diagnòstic de setembre i dos gràfics PNG.
+- La web carrega `output/demo_web.json` amb les metadades, els KPI i les comparacions publicables. Consulta el [README](../../README.md) per activar la càrrega en cada mode.
 
 ## Check
 

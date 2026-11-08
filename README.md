@@ -11,13 +11,14 @@ pnpm start
 
 No cal compilació. L’origen per defecte és http://127.0.0.1:3000. En mode local la contrasenya sintètica és `equip-damm`. Copia `.env.example` a `.env` per configurar les connexions. Les claus són exclusivament del servidor; `.env` i `data/` estan exclosos de Git.
 
-Executa `pnpm demo:seed` per carregar les quatre campanyes de la captura a la base local `data/demo.sqlite`. Hi ha un esborrany, dues consultes en recollida i una onada tancada amb 180 respostes sintètiques. L’ordre només carrega els exemples si la base és buida.
+Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a `data/demo.sqlite`. La mateixa càrrega es fa en arrencar la demo local.
 
 | Variable | Ús |
 | --- | --- |
 | `APP_MODE` | `demo` local o `connected` per publicar a Typeform |
 | `PORT`, `HOST`, `PUBLIC_ORIGIN` | Port, interfície i origen exacte; HTTPS en remot connectat |
-| `DB_PATH` | Base SQLite; un camí nou crea un espai buit |
+| `DB_PATH` | Base SQLite |
+| `LOAD_SIMULATION` | La demo local carrega l’etapa 03 per defecte. Usa `0` amb una base nova per començar en blanc, o `1` per carregar-la també en mode connectat. |
 | `ADMIN_PASSWORD` | Obligatòria en connectat, mínim 8 caràcters |
 | `HMAC_SECRET` | Obligatòria en connectat, mínim 32 caràcters; estable durant el cicle |
 | `LLM_PROVIDER` | `groq` o `openai` |
@@ -25,24 +26,24 @@ Executa `pnpm demo:seed` per carregar les quatre campanyes de la captura a la ba
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Alternativa OpenAI Responses |
 | `TYPEFORM_TOKEN` | Token de Typeform per crear i consultar formularis/respostes |
 
-La configuració local de la verificació utilitza `data/blank.sqlite`. Les bases anteriors es conserven i no s’han eliminat. El servidor actualitzat s’ha executat a http://127.0.0.1:3002 perquè 3001 ja estava ocupat. No es migren ni es netegen automàticament bases existents.
+La demo incorpora sis onades tancades de l’etapa 03. A **Campanyes** hi ha els resultats de cada onada. A **Accions i seguiment** es pot obrir cada seguiment vinculat a l’acció simulada. La càrrega afegeix només els identificadors de simulació que falten i conserva les campanyes existents.
 
 ## Flux des de zero
 
-1. **Nova consulta:** escriu nom, objectiu, decisió i context; escull el públic i les exclusions. Els camps descriptius comencen buits.
+1. **Nova consulta:** escriu la necessitat i prem «Generar amb IA», o desa un esborrany. El nom, la decisió i el context són opcionals. Pots ajustar el públic i les exclusions.
 2. **Consulta:** inicialment no conté preguntes i no es pot aprovar. «Generar amb IA real» envia la descripció a Groq. No envia exemples de contingut ni insereix les antigues preguntes sobre torns.
 3. **Revisió:** comprova i edita el títol, introducció, preguntes, opcions, ordre i condicions. El JSON complet també es pot editar. El servidor valida 3–6 preguntes i cada recorregut, durada estimada inferior a 120 segons i referències de condicions.
 4. **Aprovació:** aprova la versió exacta. Una edició revoca l’aprovació. Els errors del proveïdor conserven l’esborrany; un 429 mostra l’espera indicada.
 5. **Publicació:** crea el formulari real a Typeform en mode connectat. La repetició recupera la publicació existent; un resultat remot incert exigeix reconciliació.
-6. **Difusió:** mostra l’enllaç Typeform i permet descarregar-ne el QR directe. També conserva l’accés amb credencial de la plataforma i el seu QR.
+6. **Difusió:** comparteix el QR de la plataforma per recollir respostes que es puguin importar. En connectat, el navegador obté un codi de seguiment de la sèrie i continua a Typeform sense credencial. El formulari local de demo continua amb credencial fictícia.
 7. **Resultats:** es calculen a partir de respostes acceptades en tancar l’onada. Les escales i seleccions utilitzen els ítems de cada consulta, sense insights sintètics inicials.
 
-El QR directe Typeform funciona amb el mòbil sense un servidor local públic. Per importar respostes als agregats de l’app cal accedir a través de la plataforma: el bearer `delivery` ha de ser vàlid. Les trameses directes sense aquest bearer poden existir al proveïdor però l’app les rebutja. El QR de plataforma amb localhost només funciona al mateix ordinador; per a mòbils externs cal un `PUBLIC_ORIGIN` accessible.
+El QR directe Typeform obre el formulari per previsualitzar-lo. Per importar una resposta cal obrir-la des de la plataforma amb una referència temporal `delivery` vàlida en el moment de la tramesa. Per compartir el QR de la plataforma amb mòbils externs, configura un `PUBLIC_ORIGIN` HTTPS accessible.
 
 ## Privacitat i límits
 
 - Només dades sintètiques. Les credencials `DEMO-0001`–`DEMO-0600` són per Planta; els altres públics tenen 120 credencials. No s’hi han d’introduir IDs reals.
-- Sessions HttpOnly/SameSite, comprovació d’origen, HMAC per cicle i una resposta acceptada per credencial/onada. La credencial no prova identitat física.
+- En connectat, la cookie de seguiment dura 30 dies i es renova en continuar a Typeform. Es permet una resposta per navegador i onada mentre es conserva el codi. Canviar de navegador o esborrar la cookie permet respondre amb un codi nou. El mateix navegador pot ser compartit. En local, la deduplicació és per credencial i onada.
 - L’app publica una instantània immutable al tancament. Bases inferiors a 10 i complements petits estan protegits. No exposa respostes individuals.
 - **Text lliure:** després de retirar les frases i classificacions prefabricades, no hi ha textos admissibles en producció. Es descarten abans de persistir o enviar al model. Cal implementar i revisar la depuració de privacitat per analitzar comentaris arbitraris.
 - El catàleg d’accions i temes de la demo continua limitat a comunicació, suport i planificació. No genera insights sense evidència publicable. La generació de consultes és oberta a altres temes.
@@ -57,7 +58,7 @@ pnpm check
 python tests/browser.py
 ```
 
-23 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats. Els exemples es carreguen explícitament amb `pnpm demo:seed` o en els tests aïllats.
+23 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats.
 
 `python tests/live-survey.py` és una prova optativa amb efectes reals: utilitza les claus locals, genera amb Groq i publica una consulta sintètica a Typeform. Requereix una instància connectada amb base buida i `LIVE_ORIGIN` (per defecte http://127.0.0.1:3002). No és part de `pnpm test`. Les captures i JSON de prova es desen a `test-results/`, exclòs de Git.
 
@@ -69,4 +70,4 @@ Fonts: [Groq JSON](https://console.groq.com/docs/structured-outputs), [Typeform 
 
 [Mapa ICM](CONTEXT.md) · [Especificació](.plans/escolta-activa-damm-spec.md) · [Model lògic](stages/02_model-logic/output/model-logic.md) · [Contracte d’implementació](docs/implementation.md).
 
-La petició d’un llenç en blanc substitueix l’antiga inicialització amb exemple i calibració sintètica. La revisió humana de les etapes 01 i 02 continua pendent.
+La revisió humana de les etapes 01 i 02 continua pendent.

@@ -89,7 +89,7 @@ test("LLM uses an explicit JSON contract, JSON and distinct task contexts; inval
   const s = await generateSurvey({ objectiu: "Torns" }, config, template);
   assert.deepEqual(s, template);
   assert.ok(request.instructions.includes("Contracte de generació JSON"));
-  assert.ok(request.instructions.includes("credencials sintètiques"));
+    assert.ok(request.instructions.includes("afegeix l’avís de privacitat si cal"));
   assert.equal(request.store, false);
   assert.ok(!JSON.stringify(request).includes("test-key"));
   await llmJSON(

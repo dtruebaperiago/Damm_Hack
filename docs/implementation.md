@@ -10,6 +10,10 @@ L’accés al formulari de Typeform continua sent públic al proveïdor. El camp
 
 Les credencials fictícies es normalitzen amb NFKC, trim i majúscules, i es validen contra un conjunt provisionat. HMAC-SHA256 inclou versió i cicle: el mateix pseudònim es manté entre onades del mateix cicle. Mai s’emmagatzema l’ID original. El registre restringit d’autoritzacions està separat de les respostes analítiques. RRHH només accedeix a DTOs agregats, mai a tokens, pseudònims o respostes individuals. HMAC no verifica qui posseeix físicament una credencial.
 
+En mode connectat, el QR de la plataforma obre la pantalla de participació. Quan la persona continua a Typeform, el servidor crea o renova una cookie pròpia aleatòria amb abast per sèrie, `HttpOnly`, `SameSite=Strict` i `Secure` amb HTTPS. La cookie caduca al cap de 30 dies. El servidor deriva el pseudònim intern amb HMAC i passa a Typeform només el camp `delivery` d’un sol ús, vinculat a l’onada i vàlid durant 30 minuts. La importació valida la data de tramesa i pot recuperar respostes enviades a temps mentre l’onada continuï en estat publicat.
+
+Esborrar la cookie o canviar de navegador permet respondre amb un codi nou. Les respostes es poden comparar dins d’una sèrie quan provenen del mateix navegador i es conserva el codi. Els registres individuals de Typeform es purguen 30 dies després del tancament. El codi de navegador deixa el torn de feina desconegut. [Decisió de seguiment al navegador](adr/0002-codi-de-seguiment-al-navegador.md)
+
 ## Publicació de resultats
 
 Les onades obertes no exposen recomptes canviants. RRHH tanca la recollida per obtenir una única instantània immutable; els imports posteriors queden bloquejats. Això evita revelar respostes noves per diferència entre actualitzacions. Bases inferiors a 10 se suprimeixen; els talls per torn se suprimeixen conjuntament si un és petit. Distribucions i mètriques també protegeixen categories i complements petits. El seguiment utilitza només parelles vàlides comparables i protegeix la base i les pèrdues.

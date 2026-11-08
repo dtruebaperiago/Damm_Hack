@@ -63,9 +63,11 @@ export class Store {
     return { ...w, config: JSON.parse(w.config), survey: JSON.parse(w.survey) };
   }
   validateConfig(c) {
-    for (const key of ["titol", "objectiu", "decisio", "context"])
-      if (typeof c[key] !== "string" || !c[key].trim() || c[key].length > 2000)
-        throw new AppError(`Cal completar ${key} (màxim 2.000 caràcters).`);
+    if (typeof c.objectiu !== "string" || !c.objectiu.trim() || c.objectiu.length > 2000)
+      throw new AppError("Cal escriure la necessitat (màxim 2.000 caràcters).");
+    for (const key of ["titol", "decisio", "context"])
+      if (c[key] !== undefined && (typeof c[key] !== "string" || c[key].length > 2000))
+        throw new AppError(`El camp ${key} admet fins a 2.000 caràcters.`);
     if (
       !Object.hasOwn(locations, c.sector) ||
       c.ubicacio !== locations[c.sector] ||
@@ -75,10 +77,10 @@ export class Store {
     if (!Number.isInteger(c.dies) || c.dies < 1 || c.dies > 30)
       throw new AppError("La finestra ha de ser entre 1 i 30 dies.");
     return {
-      titol: c.titol.trim(),
+      titol: c.titol?.trim() || c.objectiu.trim().slice(0, 160),
       objectiu: c.objectiu.trim(),
-      decisio: c.decisio.trim(),
-      context: c.context.trim(),
+      decisio: c.decisio?.trim() || "",
+      context: c.context?.trim() || "",
       conceptes: [],
       public: { sector: c.sector, ubicacio: c.ubicacio, torn: c.torn },
       dies: c.dies,
@@ -145,18 +147,17 @@ export class Store {
           "La versió ha canviat o ja està publicada. Torna a obrir la campanya.",
           409,
         );
-      const errors = validateSurvey(
-        survey,
-        w.parent_id ? this.wave(w.parent_id).survey : template,
-      );
-      if (errors.length) throw new AppError(errors.join(" "));
-      if (
-        !/pseudonimitz/i.test(survey.introduccio) ||
-        !/onad/i.test(survey.introduccio)
-      )
-        throw new AppError(
-          "La introducció ha d’explicar la pseudonimització i el vincle entre onades.",
+      if (survey === undefined && configInput) {
+        survey = w.survey;
+      } else {
+        const errors = validateSurvey(
+          survey,
+          w.parent_id ? this.wave(w.parent_id).survey : template,
         );
+        if (errors.length) throw new AppError(errors.join(" "));
+        if (!/pseudonimitz/i.test(survey.introduccio) || !/onad/i.test(survey.introduccio))
+          throw new AppError("La introducció ha d’explicar la pseudonimització i el vincle entre onades.");
+      }
       let config = w.config;
       if (configInput) {
         config = this.validateConfig(configInput);
@@ -267,24 +268,43 @@ export class Store {
         "No s’ha pogut autoritzar l’accés. Comprova la credencial i la finestra; potser ja has respost.",
         403,
       );
+    return this.issueDelivery(id, participant, c.shift);
+  }
+  browserDelivery(w, code) {
+    const opened = now();
+    if (
+      w.source !== "typeform" ||
+      w.state !== "published" ||
+      opened < w.config.opens ||
+      opened > w.config.closes
+    )
+      throw new AppError("Aquesta consulta no està oberta.", 403);
+    const participant = this.pseudonym(w.cycle, "browser:" + this.hash(code));
+    if (this.db.prepare("SELECT 1 FROM response_links WHERE wave_id=? AND participant=?")
+      .get(w.id, participant))
+      throw new AppError("Aquest navegador ja ha respost a la consulta.", 409);
+    return this.issueDelivery(w.id, participant, "Desconegut");
+  }
+  issueDelivery(id, participant, shift) {
     const token = randomBytes(32).toString("base64url");
+    const issued = now();
     this.db
       .prepare("INSERT INTO deliveries VALUES(?,?,?,?,?,?,0)")
       .run(
         this.hash(token),
         id,
         participant,
-        c.shift,
-        now(),
-        now() + 30 * 60000,
+        shift,
+        issued,
+        issued + 30 * 60000,
       );
     return token;
   }
-  checkDelivery(id, token, submitted = now()) {
+  checkDelivery(id, token, submitted = now(), importing = false) {
     const w = this.wave(id),
       d = this.db
         .prepare("SELECT * FROM deliveries WHERE token_hash=? AND wave_id=?")
-        .get(this.hash(token || ""), id);
+      .get(this.hash(typeof token === "string" ? token : ""), id);
     if (
       w.state !== "published" ||
       !d ||
@@ -292,7 +312,8 @@ export class Store {
       !Number.isFinite(submitted) ||
       submitted < d.created_at - 1000 ||
       submitted > d.expires_at ||
-      now() > d.expires_at ||
+      (!importing && now() > d.expires_at) ||
+      (importing && submitted > now() + 1000) ||
       submitted < w.config.opens ||
       submitted > w.config.closes
     )
@@ -305,7 +326,7 @@ export class Store {
   accept(id, token, externalId, answers, source, submitted = now()) {
     return this.tx(() => {
       // Imports només coneixen el bearer rebut de Typeform; mai el pseudònim.
-      const { w, d } = this.checkDelivery(id, token, submitted);
+      const { w, d } = this.checkDelivery(id, token, submitted, source === "typeform");
       if (
         typeof externalId !== "string" ||
         !externalId ||
@@ -352,6 +373,8 @@ export class Store {
           w.survey,
           w.config.public,
         );
+      if (rows.length && rows.every((r) => r.torn === "Desconegut"))
+        snapshot.torns = [];
       const sources = Object.entries(
         rows.reduce((out, r) => {
           out[r.source] = (out[r.source] || 0) + 1;
@@ -566,13 +589,16 @@ export class Store {
     this.db.prepare("DELETE FROM sessions WHERE expires_at<?").run(now());
     this.db.prepare("DELETE FROM rate_limits WHERE expires_at<?").run(now());
     this.db
-      .prepare("DELETE FROM deliveries WHERE expires_at<?")
+      .prepare(`DELETE FROM deliveries WHERE expires_at<? AND wave_id NOT IN
+        (SELECT id FROM waves WHERE state='published' AND source='typeform')`)
       .run(now() - 7 * 86400000);
     const cutoff = now() - 30 * 86400000;
     // Purga els registres restringits i l’analítica individual; només resta la instantània agregada final.
     for (const { id, cycle } of this.db
       .prepare(
-        "SELECT id,cycle FROM waves WHERE state='closed' AND created_at<?",
+        `SELECT id,cycle FROM waves WHERE state='closed' AND
+         CASE WHEN source='typeform' THEN COALESCE(unixepoch(json_extract(snapshot,'$.closed_at')) * 1000, created_at)
+         ELSE created_at END < ?`,
       )
       .all(cutoff)) {
       this.db.prepare("DELETE FROM deliveries WHERE wave_id=?").run(id);

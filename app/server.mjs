@@ -10,6 +10,7 @@ import {
 } from "node:crypto";
 import qr from "qrcode-generator";
 import { Store } from "./store.mjs";
+import { loadSimulation } from "./simulation.mjs";
 import { template, topics } from "./domain.mjs";
 import {
   AppError,
@@ -29,11 +30,12 @@ const cookieValue = (req, key) => {
 };
 export function createApplication(config) {
   const store = new Store(config.dbPath, config);
+  if (config.loadSimulation) loadSimulation(store);
   const passwordSalt = randomBytes(16),
     passwordHash = scryptSync(config.adminPassword, passwordSalt, 32);
   const secure = new URL(config.origin).protocol === "https:";
-  const cookie = (name, value, maxAge) =>
-    `${name}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
+  const cookie = (name, value, maxAge, path = "/") =>
+    `${name}=${value}; Path=${path}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
   const auth = (req) => {
     const token = cookieValue(req, "ea_admin");
     if (
@@ -158,6 +160,8 @@ export function createApplication(config) {
       if (participant) {
         const [, id, action] = participant,
           w = store.wave(id);
+        if (w.source === "simulation")
+          throw new AppError("Aquesta onada és una simulació tancada.", 409);
         if (req.method === "GET" && !action) {
           let admitted = false;
           try {
@@ -178,6 +182,19 @@ export function createApplication(config) {
           });
         }
         if (req.method === "POST" && action === "auth") {
+          if (w.source === "typeform") {
+            const name = "ea_series_" + store.hash(w.cycle).slice(0, 32);
+            const saved = cookieValue(req, name);
+            const code = /^[A-Za-z0-9_-]{43}$/.test(saved)
+              ? saved
+              : randomBytes(32).toString("base64url");
+            const token = store.browserDelivery(w, code);
+            res.setHeader("Set-Cookie", [
+              cookie(name, code, 30 * 86400),
+              cookie("ea_typeform_delivery", token, 1800, `/go/${id}`),
+            ]);
+            return send(200, { ok: true, mode: w.source, destination: `/go/${id}` });
+          }
           store.rateLimit(`participant:${req.socket.remoteAddress}`);
           const token = store.delivery(id, body.credential);
           res.setHeader("Set-Cookie", cookie("ea_participant", token, 1800));
@@ -213,7 +230,7 @@ export function createApplication(config) {
       const go = path.match(/^\/go\/([a-zA-Z0-9-]+)$/);
       if (go) {
         const id = go[1],
-          token = cookieValue(req, "ea_participant"),
+          token = cookieValue(req, "ea_typeform_delivery") || cookieValue(req, "ea_participant"),
           { w } = store.checkDelivery(id, token);
         let target = `/participa/${id}`;
         if (w.source === "typeform") {
@@ -290,6 +307,8 @@ export function createApplication(config) {
           });
         }
         if (req.method !== "POST") throw new AppError("Mètode no permès.", 405);
+        if (w.source === "simulation")
+          throw new AppError("Aquesta onada és una simulació tancada.", 409);
         if (action === "edit")
           store.edit(id, body.version, body.survey, body.config);
         else if (action === "approve") store.approve(id, body.version);
@@ -571,6 +590,8 @@ if (
   const { server, store } = createApplication({
     dbPath,
     mode,
+    loadSimulation: process.env.LOAD_SIMULATION === "1" ||
+      (mode === "demo" && process.env.LOAD_SIMULATION !== "0"),
     secret,
     adminPassword,
     origin,

@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import json
 from pathlib import Path
 
 from calcula_kpi import compara_onades, resumeix_campanyes
@@ -51,6 +52,9 @@ def main():
     escriu_csv(args.sortida / 'prova_trameses.csv', respostes)
     escriu_csv(args.sortida / 'kpi_onades.csv', kpis)
     escriu_csv(args.sortida / 'comparacions_kpi.csv', comparacions)
+    (args.sortida / 'demo_web.json').write_text(json.dumps({
+        'onades': onades, 'kpis': kpis, 'comparacions': comparacions,
+    }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     exporta_calibracio(args.sortida, args.llavor, PUBLIC_ID)
 
     if not args.sense_grafics:

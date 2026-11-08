@@ -8,7 +8,11 @@ test('new campaigns have no questions, insights or historical fixtures and canno
  const s=new Store(':memory:',{secret:'synthetic',mode:'demo'});
  try {
   assert.deepEqual(s.list(),[]);
-  const w=s.createWave(need);
+  const { objectiu, sector, ubicacio, torn, dies } = need;
+  const w=s.createWave({ objectiu, sector, ubicacio, torn, dies });
+  assert.equal(w.config.titol, objectiu);
+  assert.equal(w.config.context, "");
+  assert.equal(w.config.decisio, "");
   assert.deepEqual(w.survey.preguntes,[]);
   assert.equal(w.survey.titol,'');
   assert.deepEqual(w.config.conceptes,[]);
@@ -27,6 +31,37 @@ test('initial generation sends no premade content and preserves every generated 
  assert.deepEqual(result.preguntes,generated.preguntes);
  assert.ok(!JSON.stringify(payload).includes('nou sistema de torns'));
  assert.ok(!JSON.stringify(payload).includes('participacio_nit'));
+});
+test('generation repairs an unconditional comment and normalizes equivalent scale options', async (t) => {
+  const generated = structuredClone(template);
+  generated.introduccio = "Volem entendre com ha anat l’acollida.";
+  for (const question of generated.preguntes) question.de_referencia = false;
+  const scale = generated.preguntes[0];
+  scale.opcions = scale.opcions.slice(0, 5).reverse().map((option) => ({
+    ...option, id: Number(option.id),
+  }));
+  const comment = generated.preguntes[3];
+  comment.obligatoria = true;
+  comment.opcions = null;
+  comment.condicio_de_visualitzacio.totes[0].opcions_ids = [1];
+  let attempts = 0;
+  t.mock.method(globalThis, 'fetch', async (_, options) => {
+    const request = JSON.parse(JSON.parse(options.body).messages[1].content);
+    attempts++;
+    const survey = structuredClone(generated);
+    if (attempts === 1) survey.preguntes[3].condicio_de_visualitzacio = null;
+    else assert.match(request.errors_de_validacio.join(" "), /text lliure/);
+    return Response.json({ choices: [{ message: { content: JSON.stringify(survey) } }] });
+  });
+  const survey = await generateSurvey({ objectiu: need.objectiu }, {
+    provider: "groq", groqKey: "synthetic", model: "openai/gpt-oss-120b",
+  });
+  assert.equal(attempts, 2);
+  assert.match(survey.introduccio, /pseudonimitzen.*onades/);
+  assert.deepEqual(survey.preguntes[0].opcions.map(({ id }) => id), ["1", "2", "3", "4", "5", "no_valorable"]);
+  assert.deepEqual(survey.preguntes[3].opcions, []);
+  assert.equal(survey.preguntes[3].obligatoria, false);
+  assert.deepEqual(survey.preguntes[3].condicio_de_visualitzacio.totes[0].opcions_ids, ["1"]);
 });
 import { aggregate, normalizeAnswers } from '../app/domain.mjs';
 test('custom choice questions publish their own counts and protect small complements',()=>{
