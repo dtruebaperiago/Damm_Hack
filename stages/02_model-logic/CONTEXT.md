@@ -20,6 +20,7 @@ Obre la presentació, l’esquema o l’estudi d’IA a través del [contracte d
 - [Plantilla de microconsulta](output/plantilla-microconsulta.md)
 - [Contracte d’anàlisi i accions amb LLM](output/contracte-analisi-llm.md)
 - [Protocol reutilitzable d’interpretació i accions](output/protocol-interpretacio-llm.md)
+- [Pipeline visual de les dades a les accions](output/pipeline-dades.svg)
 
 ## Check
 

@@ -1,5 +1,7 @@
 # Review · Blank canvas and real survey publication
 
+> Historical review of an earlier revision. Its findings and test results are not the current implementation: the working tree now includes historical calibration and a restricted synthetic-text analysis flow. See [current technical status](estat-tecnic.md).
+
 What this change does: New campaigns start with empty descriptive fields, no questions and no synthetic insights. Groq generates the survey from the description; the app validates and saves a draft before an explicit approval allows Typeform publication.
 
 Reviewed for the expected hackathon load: one People team and synthetic participants, using a single Node process and SQLite. This is not a production readiness approval.

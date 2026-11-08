@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { typeformClient, generateSurvey, llmJSON, requestJSON } from "../app/providers.mjs";
-import { template } from "./fixtures.mjs";
+import { template as surveyFixture } from "./fixtures.mjs";
+
+const template = { ...surveyFixture, adaptacions: [] };
 
 test('generation attaches canonical reference questions even when the LLM rewrites, reorders or omits them',async t=>{
   const generated=structuredClone(template);

@@ -6,6 +6,21 @@
     {
       "senyal_id": "participacio_nit",
       "proposta": "Difondre el QR també a l'inici del torn de nit"
+    },
+    {
+      "senyal_id": "historic_participacio",
+      "pregunta_id": "dificultat_principal",
+      "proposta": "Al sondeig de Planta, la participació aparent per QR va ser del 40%. La selecció d’una sola opció redueix l’esforç de resposta."
+    },
+    {
+      "senyal_id": "moment",
+      "pregunta_id": "dificultat_principal",
+      "proposta": "A la rotació Dia/Nit, l’exposició al canvi pot variar. La finestra de set dies dona un període comú i l’opció de no ús permet indicar que encara no s’ha viscut el canvi."
+    },
+    {
+      "senyal_id": "cobertura",
+      "pregunta_id": "aclariment_comprensio",
+      "proposta": "Per a la plantilla que respon des del mòbil a través del QR, el text lliure és opcional i només es mostra quan pot aclarir la resposta. Això limita l’esforç d’escriure al mòbil."
     }
   ],
   "preguntes": [
@@ -18,23 +33,23 @@
       "opcions": [
         {
           "id": "1",
-          "etiqueta": "Gens d’acord"
+          "etiqueta": "1 · Gens d’acord"
         },
         {
           "id": "2",
-          "etiqueta": "Més aviat en desacord"
+          "etiqueta": "2"
         },
         {
           "id": "3",
-          "etiqueta": "Ni d’acord ni en desacord"
+          "etiqueta": "3"
         },
         {
           "id": "4",
-          "etiqueta": "Més aviat d’acord"
+          "etiqueta": "4"
         },
         {
           "id": "5",
-          "etiqueta": "Totalment d’acord"
+          "etiqueta": "5 · Totalment d’acord"
         },
         {
           "id": "no_valorable",
@@ -54,23 +69,23 @@
       "opcions": [
         {
           "id": "1",
-          "etiqueta": "Gens d’acord"
+          "etiqueta": "1 · Gens d’acord"
         },
         {
           "id": "2",
-          "etiqueta": "Més aviat en desacord"
+          "etiqueta": "2"
         },
         {
           "id": "3",
-          "etiqueta": "Ni d’acord ni en desacord"
+          "etiqueta": "3"
         },
         {
           "id": "4",
-          "etiqueta": "Més aviat d’acord"
+          "etiqueta": "4"
         },
         {
           "id": "5",
-          "etiqueta": "Totalment d’acord"
+          "etiqueta": "5 · Totalment d’acord"
         },
         {
           "id": "no_valorable",

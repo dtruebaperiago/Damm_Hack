@@ -4,6 +4,8 @@ status: pendent-de-revisio-de-lequip
 
 # Dades de prova per a la demo d’Escolta activa
 
+**Integració actual:** el servidor llegeix el resum de calibració d’aquesta etapa com a alternativa si no hi ha registre a SQLite. Les onades CSV no es carreguen automàticament: `pnpm demo:seed` incorpora quatre campanyes des de `tests/fixtures.mjs` a `data/demo.sqlite`. La simulació i les fixtures de l’app són fonts diferenciades. [Estat tècnic](../../docs/estat-tecnic.md).
+
 ## Què s’ha simulat
 
 La fàbrica fictícia té **600 persones elegibles**. A cada onada es modelen 360 oportunitats de recollida al torn de dia i 240 al de nit. Les persones roten entre torns. Les onades mantenen les mateixes dues preguntes de referència i el mateix protocol voluntari amb QR compartit, mòbil, set dies de recollida i recordatori col·lectiu als dos torns. Les dates són fictícies.

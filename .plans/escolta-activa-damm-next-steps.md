@@ -4,6 +4,8 @@ status: proposat-per-a-lequip
 
 # Escolta activa Damm · Pròxims passos
 
+> Pla original de treball, conservat com a context; les caselles no són un inventari verificat de l’estat actual. Consulta l’[estat tècnic](../docs/estat-tecnic.md) i els checks pendents dels contractes d’etapa.
+
 **Objectiu.** En una primera sessió, tenir un gràfic de calibració que es pugui ensenyar, una microconsulta que es pugui provar al mòbil i una resposta que les dues parelles puguin seguir fins a una acció de RRHH.
 
 **Enfocament.** Les parelles treballen en paral·lel. La primera prepara els agregats de setembre i la segona prepara la microconsulta del canvi. A la posada en comú es valida com es connecten amb el dashboard i el seguiment. [Handoff](escolta-activa-damm-handoff.md) · [Especificació](escolta-activa-damm-spec.md) · [Model lògic](../stages/02_model-logic/output/model-logic.md)

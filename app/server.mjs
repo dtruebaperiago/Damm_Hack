@@ -624,6 +624,8 @@ export async function createApplication(config) {
         "/styles.css": "styles.css",
         "/favicon.svg": "favicon.svg",
         "/escoltamm-logo.png": "escoltamm-logo.png",
+        "/presentacio-acte-1.png": "presentacio-acte-1.png",
+        "/microsoft-teams.svg": "microsoft-teams.svg",
       };
       const name =
         staticFiles[path] ||
@@ -702,6 +704,7 @@ if (
     throw new Error(
       "L’entorn connectat remot exigeix PUBLIC_ORIGIN amb HTTPS.",
     );
+  const provider = process.env.LLM_PROVIDER || (process.env.GROQ_API_KEY ? "groq" : "openai");
   const { server, store } = await createApplication({
     dbPath,
     databaseUrl: process.env.DATABASE_URL,
@@ -715,10 +718,10 @@ if (
     typeformToken: process.env.TYPEFORM_TOKEN,
     typeformWebhookSecret: process.env.TYPEFORM_WEBHOOK_SECRET,
     openaiKey: process.env.OPENAI_API_KEY,
-    provider: process.env.LLM_PROVIDER || "openai",
+    provider,
     groqKey: process.env.GROQ_API_KEY,
     model:
-      process.env.LLM_PROVIDER === "groq"
+      provider === "groq"
         ? process.env.GROQ_MODEL || "openai/gpt-oss-120b"
         : process.env.OPENAI_MODEL,
   });

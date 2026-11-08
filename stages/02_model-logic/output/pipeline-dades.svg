@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">De les respostes dels formularis a les accions</title>
+  <desc id="desc">Diagrama del procés: importar respostes de Typeform, normalitzar-les i depurar-les, calcular mètriques i descobrir temes, protegir i contextualitzar l’evidència, interpretar-la amb regles i un LLM, validar les propostes amb revisió humana, mostrar l’informe a RRHH i, si RRHH selecciona una acció, obrir una microconsulta de seguiment.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#536275"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#c8102e"/>
+    </marker>
+    <style>
+      text { font-family: "Segoe UI", Arial, sans-serif; fill: #182433; }
+      .muted { fill: #526174; }
+      .small { font-size: 15px; }
+      .card { fill: #fff; stroke: #d5dce5; stroke-width: 2; }
+      .step-title { font-size: 20px; font-weight: 700; }
+      .step-body { font-size: 16px; fill: #344256; }
+      .line { fill: none; stroke: #536275; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1050" fill="#f4f6f8"/>
+  <rect x="0" y="0" width="1600" height="16" fill="#c8102e"/>
+  <text x="70" y="88" font-size="38" font-weight="750">De les respostes dels formularis a les accions</text>
+  <text x="70" y="128" font-size="20" class="muted">Flux de processament de la demo · l’evidència es prepara al servidor; RRHH decideix què fer</text>
+
+  <text x="70" y="190" font-size="16" font-weight="700" letter-spacing="1.4" fill="#68778a">ENTRADES</text>
+  <rect x="70" y="210" width="410" height="92" rx="14" fill="#e8f1fb" stroke="#b9cde3" stroke-width="2"/>
+  <text x="94" y="244" font-size="19" font-weight="700">Respostes de Typeform</text>
+  <text x="94" y="273" font-size="16" class="muted">Trameses + ID de la versió publicada</text>
+  <rect x="510" y="210" width="500" height="92" rx="14" fill="#f0ebfa" stroke="#d3c5ee" stroke-width="2"/>
+  <text x="534" y="244" font-size="19" font-weight="700">Definició de la consulta i política</text>
+  <text x="534" y="273" font-size="16" class="muted">Preguntes, opcions, salts, regles i llindars</text>
+  <rect x="1040" y="210" width="490" height="92" rx="14" fill="#fff3df" stroke="#ead5ad" stroke-width="2"/>
+  <text x="1064" y="244" font-size="19" font-weight="700">Diagnòstic històric (si n’hi ha)</text>
+  <text x="1064" y="273" font-size="16" class="muted">Context de cobertura i biaixos, separat de l’onada</text>
+
+  <path d="M275 302 V338 H155 V369" class="line"/>
+  <path d="M760 302 V338 H576 V369" class="line"/>
+  <path d="M1285 302 V338 H996 V369" class="line"/>
+
+  <text x="70" y="352" font-size="16" font-weight="700" letter-spacing="1.4" fill="#68778a">PROCÉS</text>
+  <g>
+    <rect x="70" y="370" width="196" height="310" rx="16" class="card"/>
+    <circle cx="99" cy="407" r="19" fill="#233c5b"/><text x="99" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">1</text>
+    <text x="126" y="414" class="step-title">Importar</text>
+    <text x="90" y="459" class="step-body"><tspan x="90" dy="0">Relaciona el formulari</tspan><tspan x="90" dy="24">amb la versió correcta.</tspan><tspan x="90" dy="34">Deduplica les trameses</tspan><tspan x="90" dy="24">i descarta metadades</tspan><tspan x="90" dy="24">que no calen.</tspan></text>
+
+    <rect x="287" y="370" width="196" height="310" rx="16" class="card"/>
+    <circle cx="316" cy="407" r="19" fill="#233c5b"/><text x="316" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">2</text>
+    <text x="343" y="414" class="step-title">Normalitzar</text>
+    <text x="307" y="459" class="step-body"><tspan x="307" dy="0">Interpreta respostes</tspan><tspan x="307" dy="24">segons opcions i salts.</tspan><tspan x="307" dy="34">Separa vàlides, omissions</tspan><tspan x="307" dy="24">i altres estats. Depura</tspan><tspan x="307" dy="24">o descarta text sensible.</tspan></text>
+
+    <rect x="504" y="370" width="196" height="310" rx="16" class="card"/>
+    <circle cx="533" cy="407" r="19" fill="#233c5b"/><text x="533" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">3</text>
+    <text x="560" y="414" class="step-title">Calcular</text>
+    <text x="524" y="459" class="step-body"><tspan x="524" dy="0">El codi calcula bases,</tspan><tspan x="524" dy="24">distribucions, mètriques</tspan><tspan x="524" dy="24">i comparabilitat.</tspan><tspan x="524" dy="34">L’agent pot detectar</tspan><tspan x="524" dy="24">temes en textos depurats;</tspan><tspan x="524" dy="24">el suport es verifica.</tspan></text>
+
+    <rect x="721" y="370" width="196" height="310" rx="16" fill="#fffaf0" stroke="#e8cf9a" stroke-width="2"/>
+    <circle cx="750" cy="407" r="19" fill="#9a6415"/><text x="750" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">4</text>
+    <text x="777" y="414" class="step-title">Protegir</text>
+    <text x="741" y="459" class="step-body"><tspan x="741" dy="0">Aplica n ≥ 10 i supressió</tspan><tspan x="741" dy="24">complementària.</tspan><tspan x="741" dy="34">Afegeix el context històric</tspan><tspan x="741" dy="24">pertinent i congela una</tspan><tspan x="741" dy="24">instantània publicable.</tspan></text>
+
+    <rect x="938" y="370" width="196" height="310" rx="16" class="card"/>
+    <circle cx="967" cy="407" r="19" fill="#233c5b"/><text x="967" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">5</text>
+    <text x="994" y="414" class="step-title">Interpretar</text>
+    <text x="958" y="459" class="step-body"><tspan x="958" dy="0">El servidor aplica regles</tspan><tspan x="958" dy="24">aprovades. El LLM redacta</tspan><tspan x="958" dy="24">lectures i proposa accions</tspan><tspan x="958" dy="24">amb IDs d’evidència</tspan><tspan x="958" dy="24">i limitacions.</tspan></text>
+
+    <rect x="1155" y="370" width="196" height="310" rx="16" fill="#f5f1fb" stroke="#d3c5ee" stroke-width="2"/>
+    <circle cx="1184" cy="407" r="19" fill="#60458a"/><text x="1184" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">6</text>
+    <text x="1211" y="414" class="step-title">Validar</text>
+    <text x="1175" y="459" class="step-body"><tspan x="1175" dy="0">El servidor comprova IDs,</tspan><tspan x="1175" dy="24">abast i regles. Una persona</tspan><tspan x="1175" dy="24">revisa el significat i el</tspan><tspan x="1175" dy="24">suport abans de publicar.</tspan><tspan x="1175" dy="34">Si falla, es retira el bloc.</tspan></text>
+
+    <rect x="1372" y="370" width="196" height="310" rx="16" fill="#fff4f5" stroke="#e7b6bf" stroke-width="2"/>
+    <circle cx="1401" cy="407" r="19" fill="#c8102e"/><text x="1401" y="414" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">7</text>
+    <text x="1428" y="414" class="step-title">Decidir</text>
+    <text x="1392" y="459" class="step-body"><tspan x="1392" dy="0">RRHH veu resultats, bases</tspan><tspan x="1392" dy="24">i avisos; selecciona si</tspan><tspan x="1392" dy="24">vol una acció.</tspan><tspan x="1392" dy="34">El sistema desa el vincle</tspan><tspan x="1392" dy="24">amb l’evidència i prepara</tspan><tspan x="1392" dy="24">un seguiment en esborrany.</tspan></text>
+  </g>
+  <path d="M266 525 H282" class="line"/><path d="M483 525 H499" class="line"/><path d="M700 525 H716" class="line"/>
+  <path d="M917 525 H933" class="line"/><path d="M1134 525 H1150" class="line"/><path d="M1351 525 H1367" class="line"/>
+
+  <rect x="70" y="735" width="1460" height="116" rx="18" fill="#e9eef3" stroke="#c9d2dd" stroke-width="2"/>
+  <text x="96" y="774" font-size="17" font-weight="750" fill="#233c5b">CONTROLS AL LLARG DEL FLUX</text>
+  <text x="96" y="814" font-size="17" class="muted">Privacitat</text><text x="205" y="814" font-size="17">Text depurat · agregats protegits · cap cel·la petita a l’informe</text>
+  <text x="715" y="814" font-size="17" class="muted">Traçabilitat</text><text x="832" y="814" font-size="17">Cada troballa i acció enllaça amb evidència publicable</text>
+  <text x="96" y="839" font-size="15" class="muted">El diagnòstic històric dona context; no substitueix l’evidència de l’onada actual ni justifica per si sol una acció de canvi.</text>
+
+  <path d="M1550 680 H1580 V896 H1240" fill="none" stroke="#c8102e" stroke-width="3" marker-end="url(#arrowRed)"/>
+  <rect x="760" y="880" width="480" height="90" rx="16" fill="#fff" stroke="#c8102e" stroke-width="2.5"/>
+  <text x="790" y="916" font-size="20" font-weight="700" fill="#a80d27">Microconsulta de seguiment · esborrany</text>
+  <text x="790" y="946" font-size="16" class="muted">RRHH revisa i aprova abans de publicar una nova onada.</text>
+  <path d="M760 925 H60 V256 H64" fill="none" stroke="#c8102e" stroke-width="3" stroke-dasharray="9 8" marker-end="url(#arrowRed)"/>
+  <text x="80" y="912" font-size="15" font-weight="650" fill="#a80d27">nova onada</text>
+
+  <text x="1530" y="1022" text-anchor="end" font-size="14" class="muted">Esborrany visual · pendent de revisió de l’equip</text>
+</svg>

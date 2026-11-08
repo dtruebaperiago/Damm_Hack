@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { Database, decodeJSON } from "./db.mjs";
 import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
@@ -20,6 +21,20 @@ const locations = {
   Logística: "Magatzem de demo",
   Comercial: "Zona comercial de demo",
   Oficines: "Oficina de demo",
+};
+const september = JSON.parse(readFileSync(
+  new URL("../stages/03_simulacio/output/calibracio_resum.json", import.meta.url),
+  "utf8",
+));
+const demoCalibration = {
+  sector: september.poblacio.sector,
+  ubicacio: locations.Planta,
+  population: september.poblacio.poblacio_elegible,
+  periode: september.resum.periode,
+  pregunta: september.resum.pregunta,
+  referencia: september.resum.distribucions.referencia.recomptes_1_a_5,
+  voluntaria: september.resum.distribucions.voluntaria.recomptes_1_a_5,
+  origen: "Sondeig sintètic",
 };
 const caNumber = new Intl.NumberFormat("ca-ES", { maximumFractionDigits: 1 });
 const measurement = (w) => ({ survey: w.survey, public: w.config.public, protocol: w.config.protocol });
@@ -51,7 +66,8 @@ export class Store {
     const row = await this.db
       .prepare("SELECT data FROM historical_calibrations WHERE id=?")
       .get("setembre-2026");
-    return historical(audience, row ? decodeJSON(row.data) : null);
+    const fallback = this.settings.mode === "demo" && !this.db.postgres ? demoCalibration : null;
+    return historical(audience, row ? decodeJSON(row.data) : fallback);
   }
   hash(s) {
     return createHash("sha256").update(s).digest("hex");
@@ -630,6 +646,8 @@ export class Store {
     if (generation && isDeepStrictEqual(generation.public, w.config.public)) {
       if (Object.hasOwn(generation, "distribucio_historica"))
         chart = generation.distribucio_historica;
+      else if (generation.grafic_setembre)
+        chart = historical(w.config.public, demoCalibration);
       else if (!isDeepStrictEqual(generation.sondeig, diagnostic))
         chart = null;
     }

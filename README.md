@@ -1,6 +1,6 @@
 # Damm_Hack · Escolta activa
 
-Prototip Node.js 24 amb PostgreSQL/Supabase o SQLite local per crear microconsultes a partir d’una necessitat de People. Les campanyes noves comencen sense preguntes ni insights. La IA genera un esborrany; una aprovació explícita de la versió vigent precedeix la publicació a Typeform.
+Prototip Node.js 24 amb PostgreSQL/Supabase o SQLite local per crear microconsultes a partir d’una necessitat de People. Les campanyes noves comencen sense preguntes ni resultats propis. La IA genera un esborrany; una aprovació explícita de la versió vigent precedeix la publicació a Typeform.
 
 ## Executar
 
@@ -9,7 +9,7 @@ pnpm install --frozen-lockfile --ignore-scripts
 pnpm start
 ```
 
-No cal compilació. L’origen per defecte és http://127.0.0.1:3000. En mode local la contrasenya sintètica és `equip-damm`. Copia `.env.example` a `.env` per configurar les connexions. Les claus són exclusivament del servidor; `.env` i `data/` estan exclosos de Git.
+No cal compilació. L’origen per defecte és http://127.0.0.1:3000. En mode local la contrasenya sintètica és `equip-damm`. Copia `.env.example` a `.env` per configurar les connexions. També s’admet el fitxer local `env`; si tots dos defineixen una variable, preval `.env`. Els fitxers de claus i `data/` estan exclosos de Git.
 
 Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a `data/demo.sqlite`. La mateixa càrrega es fa en arrencar la demo local.
 
@@ -24,7 +24,7 @@ Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a
 | `LOAD_SIMULATION` | La demo local carrega l’etapa 03 per defecte. Usa `0` amb una base nova per començar en blanc, o `1` per carregar-la en una base de demo SQLite o PostgreSQL/Supabase dedicada. Amb `DATABASE_URL`, no es carrega per defecte. |
 | `ADMIN_PASSWORD` | Obligatòria en connectat, mínim 8 caràcters |
 | `HMAC_SECRET` | Obligatòria en connectat, mínim 32 caràcters; estable durant el cicle |
-| `LLM_PROVIDER` | `groq` o `openai` |
+| `LLM_PROVIDER` | `groq` o `openai`; si s’omet, es tria Groq quan hi ha `GROQ_API_KEY` |
 | `GROQ_API_KEY`, `GROQ_MODEL` | Groq Chat Completions; model verificat `openai/gpt-oss-120b` |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Alternativa OpenAI Responses |
 | `TYPEFORM_TOKEN` | Token de Typeform per crear i consultar formularis/respostes |
@@ -33,12 +33,14 @@ La demo incorpora sis onades tancades de l’etapa 03. A **Campanyes** hi ha els
 
 ## Flux des de zero
 
+La portada obre la diapositiva de **Presentació**. Fes clic a la diapositiva o activa l’enllaç **Continuar a la visió general** per obrir el tauler. També pots tornar a la diapositiva a `/#presentation`.
+
 1. **Nova consulta:** escriu la necessitat i prem «Generar amb IA», o desa un esborrany. El nom, la decisió i el context són opcionals. Pots ajustar el públic i les exclusions.
-2. **Consulta:** inicialment no conté preguntes i no es pot aprovar. «Generar amb IA real» envia la descripció a Groq. No envia exemples de contingut ni insereix les antigues preguntes sobre torns.
-3. **Revisió:** comprova i edita el títol, introducció, preguntes, opcions, ordre i condicions. El JSON complet també es pot editar. El servidor valida 3–6 preguntes i cada recorregut, durada estimada inferior a 120 segons i referències de condicions.
+2. **Consulta:** inicialment no conté preguntes i no es pot aprovar. «Generar amb IA real» envia la descripció i els senyals agregats aplicables al proveïdor configurat. La calibració sintètica de setembre correspon a Planta; si es tria un sol torn, es mostra com a context del conjunt de la planta.
+3. **Revisió:** comprova i edita el títol, introducció, preguntes, opcions, ordre i condicions. Les notes de disseny associen els senyals i riscos contextuals amb les preguntes. El JSON complet també es pot editar. El servidor valida 3–6 preguntes i cada recorregut, durada estimada inferior a 120 segons i referències de condicions.
 4. **Aprovació:** aprova la versió exacta. Una edició revoca l’aprovació. Els errors del proveïdor conserven l’esborrany; un 429 mostra l’espera indicada.
 5. **Publicació:** crea el formulari real a Typeform en mode connectat. La repetició recupera la publicació existent; un resultat remot incert exigeix reconciliació.
-6. **Difusió:** comparteix el QR de la plataforma per recollir respostes que es puguin importar. En connectat, el navegador obté un codi de seguiment de la sèrie i continua a Typeform sense credencial. El formulari local de demo continua amb credencial fictícia.
+6. **Difusió:** comparteix el QR de la plataforma per recollir respostes que es puguin importar. En connectat, el navegador obté un codi de seguiment de la sèrie i continua a Typeform sense credencial. El formulari local de demo continua amb credencial fictícia. La targeta de Microsoft Teams simula l’enviament a un canal de prova.
 7. **Resultats:** es calculen a partir de respostes acceptades en tancar l’onada. Les escales i seleccions utilitzen els ítems de cada consulta, sense insights sintètics inicials.
 8. **Anàlisi i seguiment:** amb Groq configurat, obre **Resultats** d’una onada tancada i prem **Generar anàlisi i accions**. El servidor prepara les fitxes publicables a partir de la instantània desada a PostgreSQL o SQLite. Revisa l’informe amb **Revisar l’informe de Groq** i selecciona una acció aprovada a **Accions** per crear el seguiment.
 
@@ -74,7 +76,7 @@ Fonts: [Groq JSON](https://console.groq.com/docs/structured-outputs), [Typeform 
 
 [Mapa ICM](CONTEXT.md) · [Especificació](.plans/escolta-activa-damm-spec.md) · [Model lògic](stages/02_model-logic/output/model-logic.md) · [Contracte d’implementació](docs/implementation.md).
 
-La revisió humana de les etapes 01 i 02 continua pendent.
+La revisió humana de les tres etapes continua pendent. Consulta l’[estat tècnic](docs/estat-tecnic.md) per al mapa de l’aplicació.
 
 
 Connexió compartida: [Supabase i webhook Typeform](docs/postgresql-setup.md). `pnpm db:check` comprova la connexió i prepara les migracions; si la connexió remota falla, el servidor no canvia silenciosament a SQLite.

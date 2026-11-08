@@ -1,5 +1,7 @@
 # Escolta activa · Mapa de treball
 
+Per executar el prototip, consulta el [README](README.md) i l’[estat tècnic](docs/estat-tecnic.md). Les revisions de les etapes continuen pendents de l’equip.
+
 [Handoff Supabase i Typeform](.plans/handoff-supabase-typeform.md) · Estat de la base compartida, proves Typeform, simulació carregada i recepció automàtica pendent.
 
 [Handoff del hackathon](.plans/escolta-activa-damm-handoff.md) · Decisions de l’entrevista, tasques de les dues parelles i guió de la posada en comú.

@@ -58,6 +58,9 @@ test("exact branch trigger, omissions, not applicable and invalid codes stay dis
     "no_valorable",
   );
   assert.equal(read({ comprensio: "8" }).comprensio.estat, "invalida");
+  assert.equal(read({
+    dificultat_principal: "canvis", aclariment_comprensio: "Les instruccions estan disperses.",
+  }).aclariment_comprensio.estat, "desconeguda");
   assert.equal(
     read({
       comprensio: "1",

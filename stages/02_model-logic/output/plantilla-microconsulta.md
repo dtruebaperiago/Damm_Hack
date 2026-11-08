@@ -42,7 +42,7 @@ El servidor envia al LLM les instruccions d’aquest apartat i un objecte JSON a
 2. Si hi ha `preguntes_referencia`, copiar-les a les mateixes posicions amb tots els camps. En una primera onada, proposar com a referència els ítems que RRHH voldrà tornar a mesurar. Completar la consulta amb preguntes que cobreixin els conceptes necessaris. Per a cada ítem, indicar `que_mesura` i `quina_decisio_informa`.
 3. Assignar a cada pregunta un tipus i un identificador únic, curt i estable. Fer servir IDs d’opció de tipus cadena. Per a `escala_1_5`, usar `"1"` a `"5"` en ordre i `"no_valorable"` com a opció separada. En la lectura analítica, només els cinc primers codis es converteixen en valors numèrics.
 4. Afegir una repregunta si una resposta explícita pot justificar un aclariment que orienti una decisió. A `totes`, cada condició té un `pregunta_id` anterior i una llista `opcions_ids`. Dins de la llista n’hi ha prou amb una coincidència. Entre condicions cal que coincideixin totes. Una resposta absent, invàlida o amb un codi fora de la llista fa que la condició sigui falsa. Fer servir només opcions que expressin la resposta que activa el salt i deixar la repregunta com a opcional.
-5. Escriure el títol i la introducció a partir del context i del tractament de dades facilitat. Estimar la durada del camí més llarg i indicar a `adaptacions` els canvis que es proposen a partir del sondeig. Cada adaptació porta `senyal_id` i `proposta`. Si no hi ha cap adaptació basada en el sondeig, retornar `[]`.
+5. Escriure el títol i la introducció a partir del context i del tractament de dades facilitat. Estimar la durada del camí més llarg i indicar a `adaptacions` els canvis que es proposen. Cada adaptació porta `senyal_id` i `proposta`. Si justifica el format o l’enunciat d’una pregunta, afegir `pregunta_id` i explicar quina característica ajuda el públic seleccionat. `cobertura` i `moment` poden documentar riscos contextuals sense un senyal mesurat; la participació requereix un senyal del sondeig. Ometre `pregunta_id` en suggeriments generals de difusió. Si no hi ha cap adaptació justificada, retornar `[]`.
 
 **Exemple d’entrada del servidor**
 
@@ -98,11 +98,11 @@ Per a un seguiment, `seguiment` és un objecte amb `accio` i `data_aplicacio` (`
       "quina_decisio_informa": "Valorar si cal explicar millor el funcionament",
       "tipus": "escala_1_5",
       "opcions": [
-        {"id": "1", "etiqueta": "Gens d’acord"},
-        {"id": "2", "etiqueta": "Més aviat en desacord"},
-        {"id": "3", "etiqueta": "Ni d’acord ni en desacord"},
-        {"id": "4", "etiqueta": "Més aviat d’acord"},
-        {"id": "5", "etiqueta": "Totalment d’acord"},
+        {"id": "1", "etiqueta": "1 · Gens d’acord"},
+        {"id": "2", "etiqueta": "2"},
+        {"id": "3", "etiqueta": "3"},
+        {"id": "4", "etiqueta": "4"},
+        {"id": "5", "etiqueta": "5 · Totalment d’acord"},
         {"id": "no_valorable", "etiqueta": "No ho puc valorar"}
       ],
       "obligatoria": false,
@@ -116,11 +116,11 @@ Per a un seguiment, `seguiment` és un objecte amb `accio` i `data_aplicacio` (`
       "quina_decisio_informa": "Valorar si cal fer més visible el canal d’ajuda",
       "tipus": "escala_1_5",
       "opcions": [
-        {"id": "1", "etiqueta": "Gens d’acord"},
-        {"id": "2", "etiqueta": "Més aviat en desacord"},
-        {"id": "3", "etiqueta": "Ni d’acord ni en desacord"},
-        {"id": "4", "etiqueta": "Més aviat d’acord"},
-        {"id": "5", "etiqueta": "Totalment d’acord"},
+        {"id": "1", "etiqueta": "1 · Gens d’acord"},
+        {"id": "2", "etiqueta": "2"},
+        {"id": "3", "etiqueta": "3"},
+        {"id": "4", "etiqueta": "4"},
+        {"id": "5", "etiqueta": "5 · Totalment d’acord"},
         {"id": "no_valorable", "etiqueta": "No ho puc valorar"}
       ],
       "obligatoria": false,
@@ -197,7 +197,7 @@ Per a un seguiment, `seguiment` és un objecte amb `accio` i `data_aplicacio` (`
 | 3 · `dificultat_principal` | En els darrers set dies, quina ha estat la principal dificultat que has trobat amb el nou sistema de torns? | Selecció única. | Dificultat prioritzada durant el període. Escollir el primer problema operatiu que convé investigar. |
 | 4 · `aclariment_comprensio` | Si vols, explica breument què t’hauria ajudat a entendre millor el canvi. Evita incloure noms o dades identificatives. | Text opcional. Es mostra si Q1 és `1` i a Q3 s’ha declarat alguna dificultat. | Context sobre què hauria ajudat les persones que han donat aquesta resposta. Orientar una millora de la comunicació. |
 
-**Escala de Q1 i Q2.** `1` Gens d’acord · `2` Més aviat en desacord · `3` Ni d’acord ni en desacord · `4` Més aviat d’acord · `5` Totalment d’acord. Oferir `no_valorable` «No ho puc valorar» com a opció separada de l’escala.
+**Escala de Q1 i Q2.** `1` Gens d’acord · `2` · `3` · `4` · `5` Totalment d’acord. Oferir `no_valorable` «No ho puc valorar» com a opció separada de l’escala.
 
 **Opcions de Q3.** `funcionament` Entendre com funciona · `antelacio` Conèixer el torn amb antelació · `canvis` Gestionar canvis de torn · `necessitats_personals` Compatibilitzar el torn amb necessitats personals · `altra` Una altra dificultat · `cap` Cap dificultat · `no_us` No he utilitzat el nou sistema en aquest període · `prefereixo_no_respondre` Prefereixo no respondre. `cap`, `no_us` i `prefereixo_no_respondre` porten al final del formulari, igual que una omissió si Q3 és opcional.
 

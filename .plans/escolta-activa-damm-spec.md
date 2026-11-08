@@ -15,7 +15,7 @@ El prototip permet a People/RRHH entendre com s’ha rebut un canvi organitzatiu
 | [Esquema de l’equip](../esquema_clima_laboral.svg) | Proposta de l’equip. Sondeig, diagnòstic abans de publicar, adaptació de la consulta i canals segons el col·lectiu. |
 | Entrevista de l’equip | Cas de demo, segmentació controlada per RRHH, diagnòstic de biaixos mesurats i riscos, QR real, quiosc com a extensió, dues preguntes fixes i selecció d’una acció amb seguiment. |
 
-Els valors numèrics, els textos d’exemple i les regles operatives d’aquest document són decisions de prototip. Totes les dades, ubicacions, comentaris i respostes de la demo són ficticis o de prova. En una aplicació futura, el sondeig podria recollir respostes reals amb els controls corresponents. L’stack i el proveïdor d’IA els triarà l’equip. Es preveu disposar d’accés a Typeform i a un LLM.
+Els valors numèrics, els textos d’exemple i les regles operatives d’aquest document són decisions de prototip. Totes les dades, ubicacions, comentaris i respostes de la demo són ficticis o de prova. En una aplicació futura, el sondeig podria recollir respostes reals amb els controls corresponents. La implementació local utilitza Node.js, SQLite i adaptadors Typeform, Groq i OpenAI; consulta l’[estat tècnic](../docs/estat-tecnic.md) per als límits i les diferències amb la branca remota.
 
 ## Usuaris i segmentació
 

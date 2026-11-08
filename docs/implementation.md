@@ -1,8 +1,8 @@
 # Contracte d’implementació · Escolta activa
 
-Estat: implementació local; revisió humana de les etapes 01 i 02 pendent.
+Estat: implementació integrada; revisió humana de les etapes pendent. [Estat tècnic](estat-tecnic.md).
 
-Una aplicació Node.js 24 amb SQLite, frontend HTML/CSS/JS i un únic paquet de QR sense scripts d’instal·lació. Cap servei extern és necessari per a la demo. Typeform i OpenAI són adaptadors del servidor, habilitats només en mode connectat amb secrets en variables d’entorn. La generació utilitza un contracte JSON sense exemples de contingut. Les campanyes comencen buides; la plantilla antiga i les dades de calibració només existeixen com a fixtures de tests. Groq i OpenAI són proveïdors alternatius.
+Aplicació Node.js 24 amb frontend HTML/CSS/JS i persistència en SQLite o PostgreSQL. La demo local funciona amb SQLite. Typeform, Groq i OpenAI es configuren amb variables del servidor. Les campanyes comencen sense preguntes i la generació usa un contracte JSON amb els senyals agregats aplicables.
 
 ## Límit de confiança
 
@@ -22,12 +22,20 @@ Les onades obertes no exposen recomptes canviants. RRHH tanca la recollida per o
 
 Eina editorial de treball: barra lateral clara, vermell de marca, fons càlid i dades amb molt contrast. El resum permet obrir una campanya o crear una consulta. El detall separa preparació, consulta, difusió i resultats/acció. A mòbil, navegació compacta i una columna; formulari de participant separat i sense navegació de RRHH. S’utilitzen els tokens de la skill; el nom és text corrent perquè no s’ha aportat un logotip oficial.
 
+## Anàlisi revisable i interfície
+
+El tancament conserva els agregats immutables. Groq rep fitxes qualitatives amb referències a evidència publicable; el servidor conserva les xifres, comprova les cites i desa la revisió a `wave_analysis`. People confirma els suports dels temes i revisa la síntesi abans de seleccionar una acció i obrir-ne el seguiment. El diàleg autenticat de temes només mostra fragments sintètics admesos i referències efímeres. La purga retira els esborranys de temes i els suports restringits.
+
+En la demo SQLite, si manca la calibració a la base, el servidor llegeix el resum sintètic de setembre. A **Consulta**, `adaptacions[].pregunta_id` enllaça una justificació de format amb una pregunta. **Cobertura** i **Moment** indiquen riscos contextuals; **Baixa participació** remet al sondeig aplicable. Aquestes notes són per a People i no formen part del formulari del participant.
+
+**Presentació** mostra la diapositiva de la demo. **Difusió** incorpora el QR, els controls d’importació i webhook Typeform i una simulació de Microsoft Teams. **Resultats** separa els agregats de les campanyes, la comparació entre mostres i els KPI de l’etapa 03.
+
 ## Fonts de les integracions
 
 - [Crear formularis](https://www.typeform.com/developers/create/reference/create-form/), [salts lògics](https://www.typeform.com/developers/create/logic-jumps/) i [recuperar respostes](https://www.typeform.com/developers/responses/reference/retrieve-responses/), consultats el 7/11/2026. No es pressuposa idempotència remota ni disponibilitat de funcions de pagament.
 - [OpenAI · sortida estructurada](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses): Responses API amb JSON i validació autoritativa al servidor. Model configurable, sense atribuir una crida real a les fixtures.
 
-## Canvi de llenç en blanc · 7/11/2026
+## Canvi de llenç en blanc · context del 7/11/2026
 
 La petició de l’usuari substitueix la inicialització prefabricada de la demo. No s’insereixen campanyes, preguntes, textos classificats ni calibracions en arrencar. La configuració local apunta a una base nova i preserva les bases anteriors. Els diagnòstics previs no mostren insights sense dades. Les seleccions arbitràries es compten per l’ID real de cada pregunta amb la mateixa supressió de complements.
 

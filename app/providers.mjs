@@ -309,7 +309,9 @@ function normalizeGeneratedQuestion(q) {
   const ordered = scale.map((id) => options.find((option) => option?.id === id));
   const unrateable = options.find((option) => option?.id === "no_valorable");
   if (ordered.every(Boolean) && options.length === (unrateable ? 6 : 5)) {
-    question.opcions = [...ordered, unrateable ?? { id: "no_valorable", etiqueta: "No ho puc valorar" }];
+    const labels = ["1 · Gens d’acord", "2", "3", "4", "5 · Totalment d’acord", "No ho puc valorar"];
+    question.opcions = [...ordered, unrateable ?? { id: "no_valorable" }]
+      .map((option, i) => ({ ...option, etiqueta: labels[i] }));
   }
   return question;
 }

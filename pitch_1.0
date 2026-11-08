@@ -1,0 +1,50 @@
+# Guió de Demo (3 Minuts): El Motor de Calibració com a Nucli
+
+**Dinàmica:** 2 Speakers (Speaker 1: El Cervell/Data, Speaker 2: L'Execució/Plataforma).
+**Temps:** 3 minuts estrictes.
+
+## ACTE 1: El Pre-programa (El nostre Factor Diferencial)
+
+**Objectiu:** Explicar per què la vostra eina és més intel·ligent que un simple formulari gràcies a la calibració prèvia.
+**Temps màxim:** 50 segons.
+**Què es veu:** Diapositiva inicial amb el contrast del sondeig de setembre (Referència vs. Voluntària).
+
+**\[0:00 - 0:50\]**
+**Speaker 1:**
+"Bona tarda. Per resoldre el repte, fer una simple plataforma d'enquestes no era suficient. Us presentem **Escoltamm**, el nostre agent d'escolta activa.
+
+El veritable valor afegit d'Escoltamm és el seu **Pre-programa**: un motor de calibració perquè entengui *qui* ens està responent. A la pantalla veieu el nostre model de prova: al setembre a una de les plantes de Catalunya vam comparar una enquesta de referència completa amb una de voluntària per QR. Què hi observem? Les opinions extremes pugen més de 20 punts percentuals.
+
+Aquesta calibració ens permet detectar possibles biaixos de cobertura, de moment o d’autoselecció. Al nostre exemple l’històric ens demostra que hi ha un **possible biaix d'autoselecció**: una distància perillosa entre les consultes i la realitat global. Si un agent artificial no preveu aquest risc, donarà consells equivocats a People.
+
+Us ensenyem com Escoltamm utilitza això per prendre decisions en directe."
+
+## ACTE 2: El Programa (La Calibració i els Objectius en Acció)
+
+**Objectiu:** Demostrar com el Pre-programa actua sobre el Typeform (Creació i Anàlisi).
+**Temps màxim:** 2 minuts i 10 segons.
+**Què es veu:** Pantalla de l'aplicació funcionant en directe.
+
+**\[0:50 - 1:30\] Formulació guiada per Objectius**
+*(Pantalla: Menú de creació de la necessitat)*
+**Speaker 2:** "Entrem al sistema. Tenim un canvi de torns a fàbrica. Com que Escoltamm ha detectat aquest possible biaix, ens recomana **augmentar la mostra** fent la consulta més *user-friendly*: menys de 2 minuts i via QR, evitant el correu.
+
+I aquí ve la clau: no ens genera preguntes a cegues ni busca donar-nos la raó. Per a cada pregunta, Escoltamm ens **defineix l'objectiu de mesura**: ens diu exactament què necessitem esbrinar, assegurant un to neutral per evitar el biaix de confirmació. Validem aquests objectius amb el nostre vist-i-plau humà, i publiquem. L'arquitectura està preparada per integrar-se també a Teams en cas d’oficines." *(L'equip escaneja el QR i simula una resposta ràpida).*
+
+**\[1:30 - 2:20\] Recap d'Objectius i Privacitat**
+*(Pantalla: Dashboard carregant respostes. Es veu el gràfic de setembre integrat al costat de les dades actuals)*
+
+"Les dades entren al moment. Abans d'analitzar, garantim la **privacitat innegociable**: per evitar respostes duplicades sense demanar cap identificació que redueixi la percepció d'anonimat de la plantilla, el nostre sistema limita la participació a **una sola resposta per dispositiu** utilitzant la MAC. Així assegurem un feedback 100% anònim però lliure de manipulacions, sumat al nostre llindar mínim d'agregació.
+
+Com analitzem ara? El dashboard no només dona números. Fa un **'recap' dels objectius inicials** per donar-nos la resposta objectiva a allò que volíem mesurar. Tot això, col·locant l'avís de la calibració al costat per advertir a RRHH: *'Compte, aquestes mètriques podrien estar inflades pel possible biaix d'autoselecció'*. Escoltamm ens dona tot el context real.”
+
+**\[2:20 - 2:45\] De l'Evidència a l'Acció**
+*(Pantalla: Secció d'Insights, generació d'acció i pregunta de seguiment)*
+**Speaker 1:**
+"Amb aquest recap i les dades segures, Escoltamm resol el nostre objectiu principal revelant una dificultat clara: les instruccions del canvi estan disperses. Ens suggereix fer un resum informatiu per a la plantilla.
+
+Decidim aplicar-ho. I per tancar el cicle, el sistema autogenera l'esborrany de la pròxima microconsulta de seguiment per avaluar directament si aquesta acció concreta ha funcionat."
+
+**\[2:45 - 3:00\] Tancament**
+**Speaker 1:**
+"Hem creat un agent on el disseny i l'anàlisi estan absolutament lligats per objectius clars, sense supòsits previs. A més, amb cada nova consulta el sistema servirà com a *baseline*, fent que Escoltamm es calibri i aprengui de forma exponencial per al futur. Escoltem amb criteri, per actuar amb precisió. Moltes gràcies.”

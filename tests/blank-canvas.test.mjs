@@ -18,12 +18,14 @@ test('new campaigns have no questions, insights or historical fixtures and canno
   assert.deepEqual(w.config.conceptes,[]);
   assert.deepEqual((await s.waveDTO(w.id)).diagnostic,[]);
   assert.deepEqual((await s.waveDTO(w.id)).proposals,[]);
-  assert.equal((await s.calibration({sector:'Planta',ubicacio:'Planta de demo',torn:'Tots dos'})).abast,'insuficient');
+  assert.equal((await s.calibration(w.config.public)).abast,'insuficient');
+  assert.equal((await s.db.prepare('SELECT COUNT(*) AS n FROM historical_calibrations').get()).n, 0);
   await assert.rejects(()=>s.approve(w.id,1),/preguntes|títol/);
  } finally {await s.db.close();}
 });
 test("initial generation sends no premade content and preserves every generated question", async (t) => {
   const generated = structuredClone(template);
+  generated.adaptacions = [];
   generated.preguntes = Array.from({ length: 3 }, (_, i) => ({
     id: "acollida_" + i,
     text: "Com valores la incorporació " + i + "?",
@@ -56,6 +58,7 @@ test("initial generation sends no premade content and preserves every generated 
 });
 test('generation repairs an unconditional comment and normalizes equivalent scale options', async (t) => {
   const generated = structuredClone(template);
+  generated.adaptacions = [];
   generated.introduccio = "Volem entendre com ha anat l’acollida.";
   for (const question of generated.preguntes) question.de_referencia = false;
   const scale = generated.preguntes[0];
