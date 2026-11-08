@@ -13,7 +13,7 @@ export async function loadSimulation(store) {
   const action = catalog.find(({ id }) => id === "instruccions");
   const insertWave = store.db.prepare(
     `INSERT INTO waves(id,parent_id,cycle,state,config,survey,source,snapshot,selected_action,created_at)
-     VALUES(?,?,?,'closed',?,?,'simulation',?,?,?) ON CONFLICT(id) DO NOTHING`,
+     VALUES(?,?,?,'closed',?,?,'simulation',?,?,?) ON CONFLICT(id) DO NOTHING RETURNING id`,
   );
 
   return store.tx(async () => {
@@ -83,12 +83,12 @@ export async function loadSimulation(store) {
         de_referencia: false,
         condicio_de_visualitzacio: null,
       }];
-      inserted += Number((await insertWave.run(
+      inserted += Number(Boolean(await insertWave.get(
         id, wave.campanya_origen_id || null, wave.serie_id, JSON.stringify(config),
         JSON.stringify({ ...survey, preguntes: questions }), JSON.stringify(snapshot),
         next ? JSON.stringify({ ...action, descripcio: next.accio, evidence, followup: next.campanya_id }) : null,
         opens,
-      )).changes);
+      )));
     }
     return inserted;
   });

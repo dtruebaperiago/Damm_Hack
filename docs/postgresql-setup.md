@@ -32,7 +32,7 @@ pnpm db:check
 pnpm start
 ```
 
-`db:check` comprova la connexió i aplica les migracions pendents. L’arrencada del servidor també les aplica dins d’una transacció amb bloqueig de migració. Amb `DATABASE_URL` buit s’utilitza SQLite; una URL configurada que falla no provoca un canvi silenciós a SQLite. No hi ha càrrega de dades de demo a l’arrencada amb PostgreSQL. La demo SQLite conserva la simulació opcional de l’etapa 03.
+`db:check` comprova la connexió i aplica les migracions pendents. L’arrencada del servidor també les aplica dins d’una transacció amb bloqueig de migració. Amb `DATABASE_URL` buit s’utilitza SQLite; una URL configurada que falla no provoca un canvi silenciós a SQLite. PostgreSQL només carrega la simulació amb `LOAD_SIMULATION=1`; SQLite conserva la càrrega per defecte en mode demo.
 
 ## Compartir amb l’equip
 
@@ -74,3 +74,14 @@ Projecte [damm hack](https://supabase.com/dashboard/project/csdjtzpusvijtnarwvzv
 Verificació sobre Supabase real: creació d’esborrany buit, edició, aprovació, publicació local de prova, acceptació d’una resposta sintètica i supressió de base petita, dins d’una transacció revertida al final. El recompte de campanyes és el mateix abans i després. S’ha provat l’inici de sessió, consulta de campanyes i tancament de sessió del servidor real a http://127.0.0.1:3002, connectat a Supabase. Evidència sense secrets a `test-results/supabase-proof.json` i `test-results/supabase-ready.jpg`.
 
 Pendent: allotjament HTTPS compartit de la web i prova real de lliurament del webhook Typeform. La base al núvol ja està preparada; la web continua executant-se localment. No s’ha carregat el conjunt de dades sintètiques del cas A ni s’han convidat membres de l’equip.
+
+
+## Activar la simulació en una base Supabase de demo dedicada
+
+Configura `DATABASE_URL` i `DATABASE_SSL_CA_FILE` per a la base de demo dedicada, conserva els secrets al servidor i afegeix `LOAD_SIMULATION=1` al seu entorn. Arrenca amb `pnpm start`. No activis aquesta variable al projecte que recull respostes de Typeform si vols mantenir-lo separat de la demo.
+
+El servidor carrega els mateixos fitxers de l’etapa 03 que SQLite: sis onades tancades, KPI, comparacions, calibració històrica, accions seleccionades i quatre vincles de seguiment. Les pantalles Campanyes, Resultats i Accions i seguiment les identifiquen com a dades sintètiques. Són instantànies agregades: no insereix respostes individuals a `accepted` ni simula trameses rebudes de Typeform.
+
+La càrrega és transaccional i conserva les files existents. Els identificadors estables i `ON CONFLICT DO NOTHING` fan que repetir l’arrencada no dupliqui ni sobreescrigui les instantànies; el loader retorna 6 insercions a la primera càrrega i 0 a la segona en una base nova. Per carregar una nova versió regenerada del dataset, usa una base de demo nova. Després de sembrar, pots retirar `LOAD_SIMULATION=1`: les dades ja persisteixen.
+
+Verificació automatitzada: PostgreSQL aïllat amb PGlite, càrrega repetida, preservació de campanyes existents i comprovació dels DTO del dashboard contra `demo_web.json`. Les revisions humanes de l’etapa 03 continuen pendents.

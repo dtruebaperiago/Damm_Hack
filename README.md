@@ -21,7 +21,7 @@ Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a
 | `DATABASE_URL` | Connexió PostgreSQL/Supabase exclusiva del servidor |
 | `DATABASE_SSL_CA_FILE` | CA pública per TLS verificat: `app/certs/supabase-ca.crt` |
 | `TYPEFORM_WEBHOOK_SECRET` | Secret de signatura de la recepció automàtica |
-| `LOAD_SIMULATION` | La demo local carrega l’etapa 03 per defecte. Usa `0` amb una base nova per començar en blanc, o `1` per carregar-la en mode connectat amb SQLite. Supabase no carrega simulacions a l’arrencada. |
+| `LOAD_SIMULATION` | La demo local carrega l’etapa 03 per defecte. Usa `0` amb una base nova per començar en blanc, o `1` per carregar-la en una base de demo SQLite o PostgreSQL/Supabase dedicada. Amb `DATABASE_URL`, no es carrega per defecte. |
 | `ADMIN_PASSWORD` | Obligatòria en connectat, mínim 8 caràcters |
 | `HMAC_SECRET` | Obligatòria en connectat, mínim 32 caràcters; estable durant el cicle |
 | `LLM_PROVIDER` | `groq` o `openai` |
@@ -61,7 +61,7 @@ pnpm check
 python tests/browser.py
 ```
 
-36 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats.
+37 proves Node; prova Chromium de login, esborrany buit, edició, aprovació, QR, participants, condicions, enviament únic, tancament, privacitat i seguiment. Amplades 320/768/1024/1440 px sense desbordament i sense errors JS. Una mutació del llindar de privacitat fa fallar la prova de recomptes personalitzats.
 
 `python tests/live-survey.py` és una prova optativa amb efectes reals: utilitza les claus locals, genera amb Groq i publica una consulta sintètica a Typeform. Requereix una instància connectada amb base buida i `LIVE_ORIGIN` (per defecte http://127.0.0.1:3002). No és part de `pnpm test`. Les captures i JSON de prova es desen a `test-results/`, exclòs de Git.
 

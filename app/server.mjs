@@ -33,7 +33,7 @@ const cookieValue = (req, key) => {
 };
 export async function createApplication(config) {
   const store = await new Store(config.dbPath, config).init();
-  if (config.loadSimulation && !store.db.postgres) await loadSimulation(store);
+  if (config.loadSimulation) await loadSimulation(store);
   const passwordSalt = randomBytes(16),
     passwordHash = scryptSync(config.adminPassword, passwordSalt, 32);
   const secure = new URL(config.origin).protocol === "https:";
@@ -610,7 +610,7 @@ if (
     databaseCA: process.env.DATABASE_SSL_CA_FILE,
     mode,
     loadSimulation: process.env.LOAD_SIMULATION === "1" ||
-      (mode === "demo" && process.env.LOAD_SIMULATION !== "0"),
+      (mode === "demo" && !process.env.DATABASE_URL && process.env.LOAD_SIMULATION !== "0"),
     secret,
     adminPassword,
     origin,
