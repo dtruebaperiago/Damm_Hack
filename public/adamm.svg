@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="adamm-title">
+  <title id="adamm-title">Adamm</title>
+  <defs>
+    <linearGradient id="adamm-enamel" x2=".25" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#f7422c"/>
+      <stop offset=".54" stop-color="#df160d"/>
+      <stop offset="1" stop-color="#a10710"/>
+    </linearGradient>
+    <linearGradient id="adamm-metal" x2="1" y2=".45" gradientUnits="objectBoundingBox">
+      <stop stop-color="#a96a30"/>
+      <stop offset=".44" stop-color="#ffebad"/>
+      <stop offset=".65" stop-color="#f2c46b"/>
+      <stop offset="1" stop-color="#bd7933"/>
+    </linearGradient>
+    <linearGradient id="adamm-cylinder">
+      <stop stop-color="#9d0812"/>
+      <stop offset=".28" stop-color="#f53620"/>
+      <stop offset=".66" stop-color="#dc150e"/>
+      <stop offset="1" stop-color="#870913"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="122" rx="34" ry="3.5" fill="#5c2a20" opacity=".19"/>
+  <g id="adamm-character" data-pivot-x="64" data-pivot-y="119" stroke="#3a1716" stroke-width="2.5" stroke-linejoin="round">
+    <g id="adamm-boots" data-pivot-x="64" data-pivot-y="119">
+      <path d="M44 92h40l-3 19H69l-5-9-5 9H47Z" fill="#432931"/>
+      <path d="M47 107h12v10q0 3-4 3H37q-5 0-4-4 1-6 14-9Zm34 0H69v10q0 3 4 3h18q5 0 4-4-1-6-14-9Z" fill="url(#adamm-enamel)"/>
+      <path d="M35 116h22m14 0h22" stroke="#f2c46b" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="adamm-body" data-pivot-x="64" data-pivot-y="77">
+      <g id="adamm-left-arm" data-pivot-x="43" data-pivot-y="63">
+        <path d="M31 79q-7 3-7 10 0 6 6 6 4 0 6-5 4-1 3-5l-2-4Z" fill="url(#adamm-enamel)"/>
+        <path d="M46 57q-13 0-18 22l11 5 10-18Z" fill="url(#adamm-enamel)"/>
+        <path d="m29 77 10 4" stroke="#f2c46b" stroke-width="2"/>
+      </g>
+      <g id="adamm-right-arm" data-pivot-x="85" data-pivot-y="63">
+        <path d="M97 79q7 3 7 10 0 6-6 6-4 0-6-5-4-1-3-5l2-4Z" fill="url(#adamm-enamel)"/>
+        <path d="M82 57q13 0 18 22l-11 5-10-18Z" fill="url(#adamm-enamel)"/>
+        <path d="m99 77-10 4" stroke="#f2c46b" stroke-width="2"/>
+      </g>
+      <g id="adamm-torso" data-pivot-x="64" data-pivot-y="77">
+        <path d="M42 60q22-9 44 0l2 29q0 6-4 10-20 8-40 0-4-4-4-10Z" fill="url(#adamm-cylinder)"/>
+        <path d="M42 91q22 8 44 0l-2 7q-20 8-40 0Z" fill="url(#adamm-metal)" stroke-width="1.6"/>
+        <path d="M47 68v18" stroke="#ff9873" stroke-width="2" stroke-linecap="round"/>
+        <polygon id="adamm-chest-badge" points="64,66.5 66.6,74.5 75,74.5 68.2,79.5 70.8,87.5 64,82.5 57.2,87.5 59.8,79.5 53,74.5 61.4,74.5" fill="#dba800" stroke="none"/>
+      </g>
+    </g>
+    <g id="adamm-head" data-pivot-x="64" data-pivot-y="53">
+      <path id="adamm-tab" data-pivot-x="88" data-pivot-y="17" d="M82 18q1-15 11-15 7 0 8 6t-9 13Zm7-8a3.3 3.3 0 1 0 6.6 0 3.3 3.3 0 1 0-6.6 0Z" fill="url(#adamm-metal)" fill-rule="evenodd" stroke-width="2"/>
+      <path d="M56 53h16v10q-8 4-16 0Z" fill="#432931"/>
+      <path d="M32 26q2-7 8-10l2-4q22-7 44 0l2 4q6 3 8 10 10 4 10 16 0 20-26 20H48q-26 0-26-20 0-12 10-16Z" fill="url(#adamm-enamel)"/>
+      <path d="M40 16q24-8 48 0l-2-5q-22-7-44 0Z" fill="url(#adamm-metal)" stroke-width="1.5"/>
+      <path d="M28 37q1-5 6-7" fill="none" stroke="#ff9873" stroke-width="2" stroke-linecap="round"/>
+      <rect x="34" y="29" width="60" height="25" rx="11" fill="#26171c" stroke="#e8ae66" stroke-width="1.5"/>
+      <g id="adamm-eyes" data-pivot-x="64" data-pivot-y="40" fill="none" stroke="#fff1c9" stroke-width="3.2" stroke-linecap="round">
+        <path d="M46 42q4-6 8 0m20 0q4-6 8 0"/>
+      </g>
+    </g>
+  </g>
+</svg>

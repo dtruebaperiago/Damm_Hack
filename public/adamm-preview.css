@@ -1,0 +1,35 @@
+:root {
+  color: #151515;
+  background: #f7f6f4;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  max-inline-size: 36rem;
+  margin: 3rem auto;
+  padding-inline: 1rem;
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  min-block-size: 16rem;
+  background: #fff;
+  border: 1px solid #d8d8d8;
+  border-radius: 1rem;
+}
+
+fieldset { margin-block: 1rem; border: 0; padding: 0; }
+legend { font-weight: 700; margin-block-end: .5rem; }
+button {
+  min-block-size: 44px;
+  margin-block-end: .35rem;
+  padding-inline: .85rem;
+  color: #900000;
+  background: #fff;
+  border: 1px solid #900000;
+  border-radius: .5rem;
+  font: inherit;
+}
+button:focus-visible, a:focus-visible { outline: 2px solid #175e83; outline-offset: 3px; }
+a { color: #900000; }

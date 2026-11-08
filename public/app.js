@@ -1,4 +1,37 @@
+import { createAdammAlert } from "./adamm-alert.js";
+
 const $ = (s) => document.querySelector(s);
+let adammAlert;
+const seenAdammTips = new Set();
+
+function showCampaignTip(campaign, screen) {
+  let kind, message;
+  if (screen === "survey" && $("#app .survey-workspace .calibration-steps")) {
+    kind = "survey-bias";
+    message = "Ep! El sondeig anterior apunta a un possible biaix. Fes un cop d’ull a l’avís de dalt abans de revisar les preguntes.";
+  } else if (screen !== "results" || campaign.source === "simulation") {
+    return false;
+  } else if (campaign.results?.recollint) {
+    kind = "collecting";
+    message = "La consulta encara és oberta. Ves a Difusió si vols recuperar l’enllaç per compartir-la.";
+  } else if (campaign.state === "closed" && campaign.results?.total === null) {
+    kind = "protected";
+    message = "Encara no hi ha prou respostes per mostrar els resultats d’aquesta onada.";
+  } else {
+    return false;
+  }
+  const key = `adamm:${campaign.id}:${kind}`;
+  if (seenAdammTips.has(key)) return false;
+  seenAdammTips.add(key);
+  try {
+    if (sessionStorage.getItem(key)) return false;
+    sessionStorage.setItem(key, "1");
+  } catch {
+    // Keep the in-memory limit when session storage is unavailable.
+  }
+  (adammAlert ??= createAdammAlert()).show(message);
+  return true;
+}
 const esc = (value) =>
   String(value ?? "").replace(
     /[&<>"']/g,
@@ -1128,18 +1161,21 @@ function watchAnalysis(id, hash) {
 }
 async function route() {
   clearTimeout(analysisPoll);
+  const hash = location.hash.slice(1);
+  if (!/^campaign\/[^/]+\/(survey|results)$/.test(hash)) adammAlert?.hide();
   if (location.hash === "#presentation") return presentationView();
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {});
   }
   if (!location.hash || location.hash === "#inici") return presentationCover();
   if (!session?.authenticated) return renderLogin();
-  const hash = location.hash.slice(1);
   try {
     campaigns = (await api("/api/campaigns")).campaigns;
     if (hash.startsWith("campaign/")) {
       const [, id, t] = hash.split("/");
-      current = await api("/api/campaigns/" + encodeURIComponent(id));
+      const campaign = await api("/api/campaigns/" + encodeURIComponent(id));
+      if (location.hash.slice(1) !== hash) return;
+      current = campaign;
       cycleCampaignId = current.id;
       draft = structuredClone(current.survey);
       editingQuestions = false;
@@ -1153,6 +1189,7 @@ async function route() {
           action: actionView,
         }[tab](),
       );
+      if (!showCampaignTip(current, tab)) adammAlert?.hide();
       if (["results", "action"].includes(tab) && analysisInProgress(current)) watchAnalysis(id, location.hash);
     } else if (hash === "campaigns") campaignList();
     else if (hash === "calibration") await calibration();
@@ -1160,12 +1197,16 @@ async function route() {
     else if (hash === "settings") settings();
     else overview();
   } catch (e) {
+    if (location.hash.slice(1) !== hash) return;
+    adammAlert?.hide();
     shell(
       `${notice(esc(e.message), "error")}<a class="btn" href="#overview">Tornar a l’inici</a>`,
     );
   }
 }
 function renderLogin() {
+  adammAlert?.destroy();
+  adammAlert = undefined;
   app.innerHTML = `<main id="main" class="login-page"><section class="login-story"><img class="brand-logo" src="/escoltamm-logo.png" alt="Escoltamm"><footer>Estrella Damm · People · UAB The Hack! 2026</footer></section><section class="login-form"><div class="login-inner"><h1>Accés de People</h1><form id="login-form"><div class="field"><label for="password">Contrasenya de l’equip</label><input id="password" name="password" type="password" autocomplete="current-password" required></div><button class="btn btn-primary" type="submit">Entrar a l’espai ${icon("arrow")}</button><p id="login-error" class="error-text" role="alert"></p></form>${session?.mode === "demo" ? notice("Contrasenya de prova: <strong>equip-damm</strong>.") : ""}<p class="participant-footer">No introdueixis dades personals reals.</p></div></section></main>`;
 }
 function showDialog(title, body) {

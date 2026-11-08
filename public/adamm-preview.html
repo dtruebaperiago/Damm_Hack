@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Adamm · Escoltamm</title>
+    <link rel="stylesheet" href="/adamm-preview.css">
+    <link rel="stylesheet" href="/adamm-alert.css">
+    <script type="module" src="/adamm-preview.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Adamm</h1>
+      <p>Prova els gestos d’Adamm, la mascota d’Escoltamm.</p>
+      <div class="stage" id="adamm-stage">
+        <canvas class="adamm-sprite" width="48" height="48" role="img" aria-label="Adamm"></canvas>
+      </div>
+      <fieldset id="adamm-controls" disabled>
+        <legend>Gestos</legend>
+        <button type="button" data-motion="peek-in">Aparèixer</button>
+        <button type="button" data-motion="peek-out">Amagar-se</button>
+        <button type="button" data-motion="blink">Parpellejar</button>
+        <button type="button" data-motion="wave">Saludar</button>
+        <button type="button" data-motion="listen">Escoltar</button>
+        <button type="button" data-motion="nod">Assentir</button>
+        <button type="button" data-motion="talk">Parlar</button>
+        <button type="button" data-motion="cheer">Celebrar</button>
+        <button type="button" data-motion="idle">Repòs</button>
+      </fieldset>
+      <p id="adamm-status" role="status">Carregant l’Adamm…</p>
+      <button type="button" id="adamm-test-alert">Prova un avís d’Adamm</button>
+      <a href="/">Torna a Escoltamm</a>
+    </main>
+  </body>
+</html>

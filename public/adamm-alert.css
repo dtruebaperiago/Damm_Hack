@@ -1,0 +1,170 @@
+.adamm-alert {
+  --adamm-ease-out: cubic-bezier(.23, 1, .32, 1);
+  --adamm-left: max(12px, env(safe-area-inset-left));
+  --adamm-bottom: max(12px, env(safe-area-inset-bottom));
+  position: fixed;
+  z-index: 20;
+  inset-inline-start: var(--adamm-left);
+  inset-block-end: var(--adamm-bottom);
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  max-inline-size: min(26rem, calc(100% - var(--adamm-left) - 12px));
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  body:has(.sidebar .side-bottom) .adamm-alert {
+    /* Center the 144px sprite in the sidebar and clear the 44px settings row. */
+    --adamm-left: 48px;
+    --adamm-bottom: 72px;
+  }
+}
+
+@media (768px <= width <= 1023px) {
+  body:has(.sidebar .side-bottom) .adamm-alert {
+    --adamm-left: 32px;
+    --adamm-bottom: 68px;
+  }
+}
+
+.adamm-alert-bubble {
+  opacity: 0;
+  transition: opacity 150ms var(--adamm-ease-out), transform 200ms var(--adamm-ease-out);
+}
+
+.adamm-alert-art {
+  position: relative;
+  flex: 0 0 144px;
+}
+
+.adamm-sprite {
+  position: relative;
+  display: block;
+  inline-size: 144px;
+  block-size: 144px;
+  image-rendering: pixelated;
+}
+
+.adamm-sprite[data-sprite-state="hidden"] { opacity: 0; }
+.adamm-alert-art .adamm-sprite[data-sprite-state="hidden"] {
+  transform: translateY(calc(100% + var(--adamm-bottom)));
+}
+
+.adamm-alert-spark {
+  position: absolute;
+  inset: 0;
+  background: #f2c46b;
+  clip-path: polygon(50% 0, 58% 36%, 91% 14%, 72% 47%, 100% 55%, 71% 63%, 88% 96%, 58% 76%, 43% 100%, 40% 74%, 6% 90%, 28% 58%, 0 41%, 34% 39%, 18% 10%, 45% 29%);
+  opacity: 0;
+}
+
+.adamm-alert-bubble {
+  position: relative;
+  min-inline-size: 0;
+  margin-block-end: 12px;
+  padding: 12px 48px 12px 14px;
+  border: 2px solid #b90000;
+  border-radius: 14px;
+  background: #fff9ee;
+  color: #151515;
+  box-shadow: 0 8px 24px #3a171622;
+  font: 400 .875rem/1.45 system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  transform: translateY(24%) scale(.95);
+  transform-origin: left bottom;
+}
+
+.adamm-alert-bubble::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -6px;
+  inset-block-end: 17px;
+  inline-size: 8px;
+  block-size: 8px;
+  border-inline-start: 2px solid #b90000;
+  border-block-end: 2px solid #b90000;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.adamm-alert-bubble strong {
+  color: #900000;
+  font: 700 .9375rem/1.4 Georgia, "Times New Roman", serif;
+}
+.adamm-alert-bubble p { margin: 3px 0 0; }
+
+.adamm-alert-bubble button {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: 44px;
+  block-size: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #900000;
+  font: 700 1.375rem/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.adamm-alert-bubble button:focus-visible { outline: 2px solid #175e83; outline-offset: -4px; }
+
+.adamm-alert-announcement {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.adamm-alert[data-open] .adamm-alert-bubble {
+  opacity: 1;
+  transform: none;
+}
+
+.adamm-alert[data-open] .adamm-alert-bubble {
+  pointer-events: auto;
+  transition-delay: 60ms;
+}
+
+@media (max-width: 420px) {
+  .adamm-alert {
+    flex-direction: column-reverse;
+    align-items: start;
+    gap: 0;
+  }
+
+  .adamm-alert-art { flex: none; }
+
+  .adamm-alert-bubble {
+    margin-block-end: 0;
+    transform-origin: left bottom;
+  }
+
+  .adamm-alert-bubble::before {
+    inset-inline-start: 68px;
+    inset-block-end: -6px;
+    transform: rotate(-45deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .adamm-alert[data-open] .adamm-alert-spark {
+    animation: adamm-alert-burst 280ms var(--adamm-ease-out);
+  }
+}
+
+@keyframes adamm-alert-burst {
+  0% { opacity: 1; transform: scale(.95) rotate(-12deg); }
+  100% { opacity: 0; transform: scale(1.35) rotate(16deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adamm-sprite,
+  .adamm-alert-art .adamm-sprite[data-sprite-state="hidden"],
+  .adamm-alert .adamm-alert-bubble {
+    transform: none;
+    transition: opacity 150ms var(--adamm-ease-out);
+  }
+}
