@@ -8,6 +8,8 @@ status: esborrany-per-assajar
 
 **Format proposat.** Dues diapositives per introduir la solució i explicar la calibració. A continuació, la plataforma en directe amb un únic cas de principi a fi. El minutatge de cinc minuts és orientatiu per al primer assaig. [Especificació](escolta-activa-damm-spec.md) · [Flux del repte](../guia_participants_repte_damm.md#4-flux-funcional-mínim)
 
+**Preparació actual:** executa `pnpm demo:scenario-a` i obre [127.0.0.1:3010](http://127.0.0.1:3010/), o el port configurat. Les dades són sintètiques i es reinicien en reiniciar el procés; la generació i l’anàlisi simulen Groq i el QR obre el formulari local. La consulta creada en directe és diferent de la còpia tancada amb 194 respostes preparades. El guió següent és una proposta per assajar: les referències a Typeform, importació en directe i comparacions aparellades requereixen verificar el recorregut disponible. Consulta els [ports i modes](../README.md#portals-locals-demo-amb-dades-i-portal-net).
+
 ## Ordre i posada en escena
 
 | Temps | Què es veu | Què expliquem |

@@ -1,6 +1,6 @@
 # Escolta activa · Mapa de treball
 
-Per executar el prototip, consulta el [README](README.md) i l’[estat tècnic](docs/estat-tecnic.md). Les revisions de les etapes continuen pendents de l’equip.
+Per executar el prototip, consulta els [ports de demo i portal net](README.md#portals-locals-demo-amb-dades-i-portal-net) i l’[estat tècnic](docs/estat-tecnic.md). Les revisions de les etapes continuen pendents de l’equip.
 
 [Handoff Supabase i Typeform](.plans/handoff-supabase-typeform.md) · Estat de la base compartida, proves Typeform, simulació carregada i recepció automàtica pendent.
 

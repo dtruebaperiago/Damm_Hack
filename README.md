@@ -2,16 +2,54 @@
 
 Prototip Node.js 24 amb PostgreSQL/Supabase o SQLite local per crear microconsultes a partir d’una necessitat de People. Les campanyes noves comencen sense preguntes ni resultats propis. La IA genera un esborrany; una aprovació explícita de la versió vigent precedeix la publicació a Typeform.
 
-## Executar
+## Portals locals: demo amb dades i portal net
+
+Els ports següents són els valors habituals, no bases de dades per si mateixos. Cal arrencar cada servidor i deixar la terminal oberta. Instal·la les dependències una vegada:
 
 ```powershell
 pnpm install --frozen-lockfile --ignore-scripts
+```
+
+### Després d’apagar o reiniciar el PC: demo al 3022
+
+La instància més recent comprovada el 8/11/2026 era la del port **3022**. Després de reiniciar el PC no queda engegada automàticament. Per tornar a preparar-la, obre PowerShell i executa:
+
+```powershell
+cd <ruta-del-repositori>
+$env:PORT = '3022'
+pnpm demo:scenario-a
+```
+
+Substitueix `<ruta-del-repositori>` per la ruta local del projecte (entre cometes si conté espais). Deixa la terminal oberta i entra a [http://127.0.0.1:3022/](http://127.0.0.1:3022/). La demo prepara les cinc campanyes sintètiques i el seguiment de l’acció seleccionada. Els canvis posteriors d’un assaig no es conserven, perquè la base és en memòria. En arrencar, s’utilitza el codi que hi hagi al repositori en aquell moment, de manera que un `pull` o una edició poden canviar la demo. El port 3022 identifica aquesta demo només mentre s’hi executi aquest comandament.
+
+**Estat preparat del 8/11/2026:** el repositori recrea el seguiment de l’acció «Compartir un resum únic de la rotació» a cada arrencada de la demo. També hi ha una còpia local de les dades visibles originals a `data/rescat-demo-3022-20261108-060933.json`, exclosa de Git. Aquesta còpia JSON no és una base completa ni intervé en l’arrencada; els identificadors i dates generats del seguiment recreat poden diferir.
+
+| Portal | Adreça i arrencada | Dades |
+| --- | --- | --- |
+| **Demo preparada** | [127.0.0.1:3010](http://127.0.0.1:3010/) · `pnpm demo:scenario-a` | Cinc campanyes sintètiques, un seguiment i resultats preparats en memòria. Es reinicien a cada arrencada. Groq i Teams se simulen. |
+| **Portal net** | [127.0.0.1:3000](http://127.0.0.1:3000/) · passos de sota | Base SQLite nova, sense campanyes ni respostes. Les dades creades es desen al fitxer escollit; la calibració històrica sintètica pot continuar disponible com a context. |
+| **Servidor normal configurable** | `pnpm start` · 3000 per defecte | Segons la configuració pot usar una base existent, PostgreSQL/Supabase o carregar la simulació. El port no garanteix que estigui buit. |
+
+Per iniciar el portal net, obre una altra terminal PowerShell a l’arrel i utilitza una ruta de base que encara no existeixi:
+
+```powershell
+$env:APP_MODE = 'demo'
+$env:PORT = '3000'
+$env:HOST = '127.0.0.1'
+$env:PUBLIC_ORIGIN = 'http://127.0.0.1:3000'
+$env:DATABASE_URL = ''
+$env:DB_PATH = 'data/portal-net.sqlite'
+$env:LOAD_SIMULATION = '0'
 pnpm start
 ```
 
-No cal compilació. L’origen per defecte és http://127.0.0.1:3000. En mode local la contrasenya sintètica és `equip-damm`. Copia `.env.example` a `.env` per configurar les connexions. També s’admet el fitxer local `env`; si tots dos defineixen una variable, preval `.env`. Els fitxers de claus i `data/` estan exclosos de Git.
+Si `data/portal-net.sqlite` ja existeix, tria un altre nom a `DB_PATH` per començar en blanc: `LOAD_SIMULATION=0` no esborra dades existents. Les variables afecten la terminal actual i tenen prioritat sobre els fitxers d’entorn. La contrasenya local per defecte és `equip-damm`, tret que s’hagi configurat `ADMIN_PASSWORD`. Per aturar un servidor, prem Ctrl+C a la seva terminal. Si el port està ocupat, atura la instància corresponent o canvia `PORT` i ajusta `PUBLIC_ORIGIN` i l’URL. L’Escenari A també accepta `PORT` i utilitza 3010 per defecte.
 
-Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a `data/demo.sqlite`. La mateixa càrrega es fa en arrencar la demo local.
+Per exemple, per executar l’Escenari A a [127.0.0.1:3022](http://127.0.0.1:3022/), en una terminal independent executa `$env:PORT = '3022'` i després `pnpm demo:scenario-a`. És una instància separada: el 3010 i el 3022 tenen cadascun la seva pròpia base en memòria i els canvis d’un no es reflecteixen a l’altre.
+
+No cal compilació. Copia `.env.example` a `.env` per configurar les connexions. També s’admet el fitxer local `env`; si tots dos defineixen una variable, preval `.env`. Els fitxers de claus i `data/` estan exclosos de Git.
+
+Executa `pnpm demo:seed` per carregar manualment la simulació de l’etapa 03 a `data/demo.sqlite`, no a la base en memòria de l’Escenari A ni necessàriament a la base del servidor configurat. La càrrega també es fa per defecte en arrencar el servidor normal en mode demo amb SQLite.
 
 | Variable | Ús |
 | --- | --- |
@@ -33,7 +71,7 @@ La demo incorpora sis onades tancades de l’etapa 03. A **Campanyes** hi ha els
 
 ## Assaig de l’Escenari A
 
-Executa `pnpm demo:scenario-a` i obre la [portada](http://127.0.0.1:3010/). Després de la presentació, la **Visió general** s’obre sense contrasenya en aquesta demo local. Cada arrencada prepara una base en memòria amb cinc campanyes. **Nova consulta** crea la sisena, en estat d’esborrany. La generació de preguntes i l’anàlisi simulen Groq. El QR obre el formulari local i Teams mostra una simulació d’enviament.
+Executa `pnpm demo:scenario-a` i obre la [portada](http://127.0.0.1:3010/). Després de la presentació, la **Visió general** s’obre sense contrasenya en aquesta demo local. Cada arrencada prepara una base en memòria amb cinc campanyes i un seguiment. **Nova consulta** crea un esborrany addicional. La generació de preguntes i l’anàlisi simulen Groq. El QR obre el formulari local i Teams mostra una simulació d’enviament.
 
 1. Obre **Nova consulta**, comprova els camps preemplenats i prem **Simular crida a Groq**. A **Consulta**, mostra el senyal històric i la pregunta breu sobre la dificultat principal. Prem **Editar preguntes manualment**, desa el canvi i aprova la versió.
 2. Prem **Publicar consulta** i mostra les opcions de **Difusió**. Obre **Campanyes** i entra a **Veure resultats** a la fila marcada com a **Resultats preparats de l’Escenari A**. Les 194 respostes són del qüestionari base de la còpia tancada. L’edició feta en directe pertany a la nova consulta.

@@ -4,7 +4,7 @@ status: pendent-de-revisio-de-lequip
 
 # Dades de prova per a la demo d’Escolta activa
 
-**Integració actual:** el servidor llegeix el resum de calibració d’aquesta etapa com a alternativa si no hi ha registre a SQLite. Les onades CSV no es carreguen automàticament: `pnpm demo:seed` incorpora quatre campanyes des de `tests/fixtures.mjs` a `data/demo.sqlite`. La simulació i les fixtures de l’app són fonts diferenciades. [Estat tècnic](../../docs/estat-tecnic.md).
+**Integració actual:** `output/demo_web.json` aporta sis onades sintètiques amb KPI i seguiments. `pnpm demo:seed` les incorpora a `data/demo.sqlite`; el servidor normal les carrega per defecte en mode demo amb SQLite, tret que `LOAD_SIMULATION=0`. Amb PostgreSQL només les carrega si `LOAD_SIMULATION=1`. La calibració de setembre també pot servir de context alternatiu en SQLite. La demo de l’Escenari A és independent: prepara cinc campanyes en memòria. Consulta els [ports i instruccions](../../README.md#portals-locals-demo-amb-dades-i-portal-net) i l’[estat tècnic](../../docs/estat-tecnic.md).
 
 ## Què s’ha simulat
 

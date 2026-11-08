@@ -24,7 +24,7 @@ Eina editorial de treball: barra lateral clara, vermell de marca, fons càlid i 
 
 ## Anàlisi revisable i interfície
 
-El tancament conserva els agregats immutables. Groq rep fitxes qualitatives amb referències a evidència publicable; el servidor conserva les xifres, comprova les cites i desa la revisió a `wave_analysis`. People confirma els suports dels temes i revisa la síntesi abans de seleccionar una acció i obrir-ne el seguiment. El diàleg autenticat de temes només mostra fragments sintètics admesos i referències efímeres. La purga retira els esborranys de temes i els suports restringits.
+El tancament conserva els agregats immutables. Amb Groq configurat, inicia l’anàlisi automàtica: el servidor contrasta els suports, valida la síntesi i aplica els llindars abans de mostrar-la a People, que pot seleccionar una acció i obrir-ne el seguiment. Groq rep fitxes qualitatives amb referències a evidència publicable; el servidor conserva les xifres, comprova les cites i desa l’anàlisi a `wave_analysis`. També existeix un flux de revisió explícita. La purga retira els esborranys de temes i els suports restringits.
 
 En la demo SQLite, si manca la calibració a la base, el servidor llegeix el resum sintètic de setembre. A **Consulta**, `adaptacions[].pregunta_id` enllaça una justificació de format amb una pregunta. **Cobertura** i **Moment** indiquen riscos contextuals; **Baixa participació** remet al sondeig aplicable. Aquestes notes són per a People i no formen part del formulari del participant.
 
@@ -35,7 +35,9 @@ En la demo SQLite, si manca la calibració a la base, el servidor llegeix el res
 - [Crear formularis](https://www.typeform.com/developers/create/reference/create-form/), [salts lògics](https://www.typeform.com/developers/create/logic-jumps/) i [recuperar respostes](https://www.typeform.com/developers/responses/reference/retrieve-responses/), consultats el 7/11/2026. No es pressuposa idempotència remota ni disponibilitat de funcions de pagament.
 - [OpenAI · sortida estructurada](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses): Responses API amb JSON i validació autoritativa al servidor. Model configurable, sense atribuir una crida real a les fixtures.
 
-## Canvi de llenç en blanc · context del 7/11/2026
+## Canvi de llenç en blanc · context històric del 7/11/2026
+
+Aquest apartat documenta un estat anterior; consulta el [README](../README.md#portals-locals-demo-amb-dades-i-portal-net) per a l’arrencada i la càrrega actuals.
 
 La petició de l’usuari substitueix la inicialització prefabricada de la demo. No s’insereixen campanyes, preguntes, textos classificats ni calibracions en arrencar. La configuració local apunta a una base nova i preserva les bases anteriors. Els diagnòstics previs no mostren insights sense dades. Les seleccions arbitràries es compten per l’ID real de cada pregunta amb la mateixa supressió de complements.
 
@@ -55,7 +57,9 @@ Validació: 30 tests Node, incloent PostgreSQL embegut PGlite i clients de pool 
 
 Connexió Supabase real verificada el 8/11/2026 després d’afegir `DATABASE_SSL_CA_FILE` amb la CA oficial inclosa al repositori (certificat públic, sense clau privada). S’han verificat deu taules amb RLS, una prova de persistència revertida i l’API del servidor real. El desplegament HTTPS i l’entrega real del webhook continuen pendents. Evidència a `test-results/supabase-proof.json`.
 
-## Integració amb Escoltamm · 8/11/2026
+## Integració amb Escoltamm · context històric del 8/11/2026
+
+La càrrega per defecte ha canviat després d’aquesta integració; consulta el [README](../README.md#portals-locals-demo-amb-dades-i-portal-net).
 
 S’ha recuperat la implementació PostgreSQL/Supabase desada per GitHub Desktop i s’ha integrat amb la interfície `1886970`. Es preserven el logotip, els estils, els textos i el selector del cicle. `Store.list()` retorna també `has_questions` i `has_followup`, que determinen el pas actiu del cicle. El botó de recepció automàtica Typeform s’incorpora a la nova vista de difusió.
 
