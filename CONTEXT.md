@@ -1,5 +1,7 @@
 # Escolta activa · Mapa de treball
 
+[Handoff Supabase i Typeform](.plans/handoff-supabase-typeform.md) · Estat de la base compartida, proves Typeform, simulació carregada i recepció automàtica pendent.
+
 [Handoff del hackathon](.plans/escolta-activa-damm-handoff.md) · Decisions de l’entrevista, tasques de les dues parelles i guió de la posada en comú.
 
 [Pròxims passos](.plans/escolta-activa-damm-next-steps.md) · Quick wins per parella i ordre d’integració de la demo.
